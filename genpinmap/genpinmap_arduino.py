@@ -276,10 +276,10 @@ const PinMap PinMap_PWM[] = {
                 s1 = "%-12s" % ("    {" + p[0] + ',')
                 #2nd element is the PWM signal
                 a = p[2].split('_')
-                inst = a[0].replace("TIM", "")
-                if len(inst) == 0:
-                    inst = '1'
-                s1 += "%-8s" % ('PWM' + inst + ',')
+                inst = a[0]
+                if len(inst) == 3:
+                    inst += '1'
+                s1 += "%-8s" % (inst + ',')
                 chan = a[1].replace("CH", "")
                 if chan.endswith('N'):
                     neg = ', 1'
@@ -317,9 +317,9 @@ const PinMap PinMap_UART_%s[] = {
             if result != 'NOTFOUND':
                 s1 = "%-12s" % ("    {" + p[0] + ',')
                 #2nd element is the UART_XX signal
-                b=p[2].split('_')[0].replace('S', '') # Remove 'S' from USART
-                s1 += b[:len(b)-1] +  b[len(b)-1:]
-                s1 += ',   STM_PIN_DATA(STM_MODE_AF_PP, GPIO_PULLUP, ' + result +')},\n'
+                b=p[2].split('_')[0]
+                s1 += "%-9s" % (b[:len(b)-1] +  b[len(b)-1:] + ',')
+                s1 += 'STM_PIN_DATA(STM_MODE_AF_PP, GPIO_PULLUP, ' + result +')},\n'
                 out_file.write(s1)
             i += 1
 
