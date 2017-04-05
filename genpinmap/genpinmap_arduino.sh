@@ -24,3 +24,5 @@ set -o nounset                              # Treat unset variables as an error
 # GPIO AF function not supported::python genpinmap_arduino.py DISCO_F051R8  "STM32F051R8Tx.xml"
 #
 python genpinmap_arduino.py NUCLEO-F429ZI "STM32F429Z(E-G-I)Tx.xml"
+python genpinmap_arduino.py DISCO_F469NI  "STM32F469N(E-G-I)Hx.xml"
+python genpinmap_arduino.py DISCO_F407G "STM32F407V(E-G)Tx.xml"
