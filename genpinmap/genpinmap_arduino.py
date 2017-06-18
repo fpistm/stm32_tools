@@ -446,8 +446,17 @@ else:
         out_path = cur_dir+'/Arduino/'+sys.argv[1]
         output_filename = out_path+'/'+out_filename
     else:
-        print ("Unsupported OS")
-        quit()
+        #print ("Darwin env")
+        if sys.platform.startswith('darwin'):
+            print("Platform is Mac OSX")
+            cubemxdir = '/Applications/STMicroelectronics/STM32CubeMX.app/Contents/Resources/db/mcu'
+            cubemxdirIP = cubemxdir+"/IP/"
+            input_file_name = cubemxdir+'/'+ sys.argv[2]
+            out_path = cur_dir+'/Arduino/'+sys.argv[1]
+            output_filename = out_path+'/'+out_filename
+        else:
+            print ("Unsupported OS")
+            quit()
 
 #open input file
 #check input file exists
