@@ -530,5 +530,5 @@ print_all_spi(xml)
 print_all_can(xml)
 
 nb_pin = (len(io_list))
-print "nb of I/O pins: %i" % nb_pin
+print ("nb of I/O pins: %i" % nb_pin)
 print ('\n    * * * ' + sys.argv[1]+'  OK')
