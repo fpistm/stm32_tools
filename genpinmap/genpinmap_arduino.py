@@ -414,7 +414,7 @@ cur_dir = os.getcwd()
 out_filename = 'PeripheralPins.c'
 
 if len(sys.argv) < 3:
-    print("USAGE: gen_periph.py <BOARD_NAME> <product xml file name>")
+    print("Usage: " + sys.argv[0] + " <BOARD_NAME> <product xml file name>")
     print("   - <BOARD_NAME> is the name of the board as it will be named in mbed")
     print("   - <product xml file name> is the STM32 file description in Cube MX")
     print("   !!This xml file contains non alpha characters in its name, you should call it with quotes")
@@ -462,7 +462,7 @@ else:
 #check input file exists
 if not(os.path.isdir(cubemxdir)):
     print ("\n ! ! ! Cube Mx seems not to be installed or not at the requested location")
-    print ("\n ! ! ! please check the value you set for cubemxdir variable at the top of gen_periph.py file")
+    print ("\n ! ! ! please check the value you set for cubemxdir variable at the top of " + sys.argv[0] + " file")
     quit()
 if not(os.path.isfile(input_file_name)):
     print ('\n ! ! ! '+sys.argv[2] + ' file not found')
