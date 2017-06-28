@@ -168,38 +168,38 @@ def print_header():
     out_file.write( s)
 
 def print_all_lists():
-    if print_list_header("ADC", "ADC" , adclist):
+    if print_list_header("ADC", "ADC", adclist, "ADC"):
         print_adc()
-    if print_list_header("DAC", "DAC" , daclist):
+    if print_list_header("DAC", "DAC", daclist, "DAC"):
         print_dac()
-    if print_list_header("I2C", "I2C_SDA" , i2csda_list):
+    if print_list_header("I2C", "I2C_SDA", i2csda_list, "I2C"):
         print_i2c(xml, i2csda_list)
-    if print_list_header("", "I2C_SCL" , i2cscl_list):
+    if print_list_header("", "I2C_SCL", i2cscl_list, "I2C"):
         print_i2c(xml, i2cscl_list)
-    if print_list_header("PWM", "PWM" , pwm_list):
+    if print_list_header("PWM", "PWM", pwm_list, "TIM"):
         print_pwm(xml)
-    if print_list_header("SERIAL", "UART_TX" , uarttx_list):
+    if print_list_header("SERIAL", "UART_TX", uarttx_list, "UART"):
         print_uart(xml, uarttx_list)
-    if print_list_header("", "UART_RX" , uartrx_list):
+    if print_list_header("", "UART_RX", uartrx_list, "UART"):
         print_uart(xml, uartrx_list)
-    if print_list_header("", "UART_RTS" , uartrts_list):
+    if print_list_header("", "UART_RTS", uartrts_list, "UART"):
         print_uart(xml, uartrts_list)
-    if print_list_header("", "UART_CTS" , uartcts_list):
+    if print_list_header("", "UART_CTS", uartcts_list, "UART"):
         print_uart(xml, uartcts_list)
-    if print_list_header("SPI", "SPI_MOSI" , spimosi_list):
+    if print_list_header("SPI", "SPI_MOSI", spimosi_list, "SPI"):
         print_spi(xml, spimosi_list)
-    if print_list_header("", "SPI_MISO" , spimiso_list):
+    if print_list_header("", "SPI_MISO", spimiso_list, "SPI"):
         print_spi(xml, spimiso_list)
-    if print_list_header("", "SPI_SCLK" , spisclk_list):
+    if print_list_header("", "SPI_SCLK", spisclk_list, "SPI"):
         print_spi(xml, spisclk_list)
-    if print_list_header("", "SPI_SSEL" , spissel_list):
+    if print_list_header("", "SPI_SSEL", spissel_list, "SPI"):
         print_spi(xml, spissel_list)
-    if print_list_header("CAN", "CAN_RD" , canrd_list):
+    if print_list_header("CAN", "CAN_RD", canrd_list, "CAN"):
         print_can(xml, canrd_list)
-    if print_list_header("", "CAN_TD" , cantd_list):
+    if print_list_header("", "CAN_TD", cantd_list, "CAN"):
         print_can(xml, cantd_list)
 
-def print_list_header(comment, name, l):
+def print_list_header(comment, name, l, switch):
     if len(l)>0:
         if comment:
             s = ("""
@@ -208,8 +208,9 @@ def print_list_header(comment, name, l):
         else:
             s = ""
         s += ("""
+#ifdef HAL_%s_MODULE_ENABLED
 const PinMap PinMap_%s[] = {
-""") % name
+""") % (switch, name)
     else:
         if comment:
             s = ("""
@@ -245,6 +246,7 @@ def print_adc():
 
         out_file.write( """    {NC,   NC,    0}
 };
+#endif
 """)
 
 def print_dac():
@@ -263,6 +265,7 @@ def print_dac():
             i += 1
         out_file.write( """    {NC,   NC,    0}
 };
+#endif
 """)
 
 def print_i2c(xml, l):
@@ -281,6 +284,7 @@ def print_i2c(xml, l):
             i += 1
         out_file.write( """    {NC,    NC,    0}
 };
+#endif
 """)
 
 def print_pwm(xml):
@@ -309,6 +313,7 @@ def print_pwm(xml):
             i += 1
         out_file.write( """    {NC,    NC,    0}
 };
+#endif
 """)
 
 def print_uart(xml, l):
@@ -328,6 +333,7 @@ def print_uart(xml, l):
 
     out_file.write( """    {NC,    NC,    0}
 };
+#endif
 """)
 
 def print_spi(xml, l):
@@ -347,6 +353,7 @@ def print_spi(xml, l):
 
         out_file.write( """    {NC,    NC,    0}
 };
+#endif
 """)
 
 def print_can(xml, l):
@@ -368,6 +375,7 @@ def print_can(xml, l):
             i += 1
         out_file.write( """    {NC,    NC,    0}
 };
+#endif
 """)
 
 tokenize = re.compile(r'(\d+)|(\D+)').findall
