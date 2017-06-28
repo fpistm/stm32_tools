@@ -167,14 +167,64 @@ def print_header():
 """ % re.sub('\.c$', '', out_filename))
     out_file.write( s)
 
+def print_all_lists():
+    if print_list_header("ADC", "ADC" , adclist):
+        print_adc()
+    if print_list_header("DAC", "DAC" , daclist):
+        print_dac()
+    if print_list_header("I2C", "I2C_SDA" , i2csda_list):
+        print_i2c(xml, i2csda_list)
+    if print_list_header("", "I2C_SCL" , i2cscl_list):
+        print_i2c(xml, i2cscl_list)
+    if print_list_header("PWM", "PWM" , pwm_list):
+        print_pwm(xml)
+    if print_list_header("SERIAL", "UART_TX" , uarttx_list):
+        print_uart(xml, uarttx_list)
+    if print_list_header("", "UART_RX" , uartrx_list):
+        print_uart(xml, uartrx_list)
+    if print_list_header("", "UART_RTS" , uartrts_list):
+        print_uart(xml, uartrts_list)
+    if print_list_header("", "UART_CTS" , uartcts_list):
+        print_uart(xml, uartcts_list)
+    if print_list_header("SPI", "SPI_MOSI" , spimosi_list):
+        print_spi(xml, spimosi_list)
+    if print_list_header("", "SPI_MISO" , spimiso_list):
+        print_spi(xml, spimiso_list)
+    if print_list_header("", "SPI_SCLK" , spisclk_list):
+        print_spi(xml, spisclk_list)
+    if print_list_header("", "SPI_SSEL" , spissel_list):
+        print_spi(xml, spissel_list)
+    if print_list_header("CAN", "CAN_RD" , canrd_list):
+        print_can(xml, canrd_list)
+    if print_list_header("", "CAN_TD" , cantd_list):
+        print_can(xml, cantd_list)
+
+def print_list_header(comment, name, l):
+    if len(l)>0:
+        if comment:
+            s = ("""
+//*** %s ***
+""") % comment
+        else:
+            s = ""
+        s += ("""
+const PinMap PinMap_%s[] = {
+""") % name
+    else:
+        if comment:
+            s = ("""
+//*** %s ***
+""") % comment
+        else:
+            s = ""
+        s+=("""
+//*** No %s ***
+""") % name
+    out_file.write(s)
+    return len(l)
+
 def print_adc():
     i = 0
-    s = ("""
-//*** ADC ***
-
-const PinMap PinMap_ADC[] = {
-""")
-    out_file.write( s)
     if len(adclist)>0:
         # Check GPIO version (alternate or not)
         s_pin_data = 'STM_PIN_DATA_EXT(STM_MODE_ANALOG, GPIO_NOPULL, 0, '
@@ -193,18 +243,12 @@ const PinMap PinMap_ADC[] = {
                 out_file.write(s1)
             i += 1
 
-    out_file.write( """    {NC,   NC,    0}
+        out_file.write( """    {NC,   NC,    0}
 };
 """)
 
 def print_dac():
     i = 0
-    s = ("""
-//*** DAC ***
-
-const PinMap PinMap_DAC[] = {
-""")
-    out_file.write( s)
     if len(daclist)>0:
         while i < len(daclist):
             p=daclist[i]
@@ -217,24 +261,12 @@ const PinMap PinMap_DAC[] = {
                 s1 += 'DAC' + b[3] + ', STM_PIN_DATA_EXT(STM_MODE_ANALOG, GPIO_NOPULL, 0, ' + b[8] + ', 0)}, // ' + b + '\n'
             out_file.write(s1)
             i += 1
-
-    out_file.write( """    {NC,   NC,    0}
+        out_file.write( """    {NC,   NC,    0}
 };
 """)
 
-def print_all_i2c(xml):
-    out_file.write("""
-//*** I2C ***
-""")
-    print_i2c(xml, "SDA", i2csda_list)
-    print_i2c(xml, "SCL", i2cscl_list)
-
-def print_i2c(xml, name, l):
+def print_i2c(xml, l):
     i = 0
-    s = ("""
-const PinMap PinMap_I2C_%s[] = {
-""") % name
-    out_file.write(s)
     if len(l)>0:
         while i < len(l):
             p=l[i]
@@ -247,19 +279,12 @@ const PinMap PinMap_I2C_%s[] = {
                 s1 += result + ')},\n'
                 out_file.write(s1)
             i += 1
-
-    out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NC,    0}
 };
 """)
 
 def print_pwm(xml):
     i=0
-    s= ("""
-//*** PWM ***
-
-const PinMap PinMap_PWM[] = {
-""")
-    out_file.write( s)
     if len(pwm_list)>0:
         while i < len(pwm_list):
             p=pwm_list[i]
@@ -282,26 +307,12 @@ const PinMap PinMap_PWM[] = {
                 s1 += ')},  // ' + p[2] + '\n'
                 out_file.write(s1)
             i += 1
-
-    out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NC,    0}
 };
 """)
 
-def print_all_uart(xml):
-    out_file.write("""
-//*** SERIAL ***
-""")
-    print_uart(xml, "TX", uarttx_list)
-    print_uart(xml, "RX", uartrx_list)
-    print_uart(xml, "RTS", uartrts_list)
-    print_uart(xml, "CTS", uartcts_list)
-
-def print_uart(xml, name, l):
+def print_uart(xml, l):
     i=0
-    s= ("""
-const PinMap PinMap_UART_%s[] = {
-""") % name
-    out_file.write(s)
     if len(l)>0:
         while i < len(l):
             p=l[i]
@@ -319,21 +330,8 @@ const PinMap PinMap_UART_%s[] = {
 };
 """)
 
-def print_all_spi(xml):
-    out_file.write("""
-//*** SPI ***
-""")
-    print_spi(xml, "MOSI", spimosi_list)
-    print_spi(xml, "MISO", spimiso_list)
-    print_spi(xml, "SCLK", spisclk_list)
-    print_spi(xml, "SSEL", spissel_list)
-
-def print_spi(xml, name, l):
+def print_spi(xml, l):
     i=0
-    s= ("""
-const PinMap PinMap_SPI_%s[] = {
-""") % name
-    out_file.write( s)
     if len(l)>0:
         while i < len(l):
             p=l[i]
@@ -347,23 +345,12 @@ const PinMap PinMap_SPI_%s[] = {
                 out_file.write(s1)
             i += 1
 
-    out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NC,    0}
 };
 """)
 
-def print_all_can(xml):
-    out_file.write("""
-//*** CAN ***
-""")
-    print_can(xml, "RD", canrd_list)
-    print_can(xml, "TD", cantd_list)
-
-def print_can(xml, name, l):
+def print_can(xml, l):
     i=0
-    s= ("""
-const PinMap PinMap_CAN_%s[] = {
-""") % name
-    out_file.write(s)
     if len(l)>0:
         while i < len(l):
             p=l[i]
@@ -379,8 +366,7 @@ const PinMap PinMap_CAN_%s[] = {
                 s1 += result +')},\n'
                 out_file.write( s1)
             i += 1
-
-    out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NC,    0}
 };
 """)
 
@@ -527,16 +513,10 @@ for s in itemlist:
 
 print ("    * * * Sorting lists...")
 sort_my_lists()
-print_header()
 
 print ("    * * * Printing lists...")
-print_adc()
-print_dac()
-print_all_i2c(xml)
-print_pwm(xml)
-print_all_uart(xml)
-print_all_spi(xml)
-print_all_can(xml)
+print_header()
+print_all_lists()
 
 nb_pin = (len(io_list))
 print ("nb of I/O pins: %i" % nb_pin)
