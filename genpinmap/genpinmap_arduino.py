@@ -244,7 +244,7 @@ def print_adc():
                 out_file.write(s1)
             i += 1
 
-        out_file.write( """    {NC,   NC,    0}
+        out_file.write( """    {NC,    NP,    0}
 };
 #endif
 """)
@@ -263,7 +263,7 @@ def print_dac():
                 s1 += 'DAC' + b[3] + ', STM_PIN_DATA_EXT(STM_MODE_ANALOG, GPIO_NOPULL, 0, ' + b[8] + ', 0)}, // ' + b + '\n'
             out_file.write(s1)
             i += 1
-        out_file.write( """    {NC,   NC,    0}
+        out_file.write( """    {NC,   NP,    0}
 };
 #endif
 """)
@@ -282,7 +282,7 @@ def print_i2c(xml, l):
                 s1 += result + ')},\n'
                 out_file.write(s1)
             i += 1
-        out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NP,    0}
 };
 #endif
 """)
@@ -311,7 +311,7 @@ def print_pwm(xml):
                 s1 += ')},  // ' + p[2] + '\n'
                 out_file.write(s1)
             i += 1
-        out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NP,    0}
 };
 #endif
 """)
@@ -331,7 +331,7 @@ def print_uart(xml, l):
                 out_file.write(s1)
             i += 1
 
-    out_file.write( """    {NC,    NC,    0}
+    out_file.write( """    {NC,    NP,    0}
 };
 #endif
 """)
@@ -351,7 +351,7 @@ def print_spi(xml, l):
                 out_file.write(s1)
             i += 1
 
-        out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NP,    0}
 };
 #endif
 """)
@@ -373,7 +373,7 @@ def print_can(xml, l):
                 s1 += result +')},\n'
                 out_file.write( s1)
             i += 1
-        out_file.write( """    {NC,    NC,    0}
+        out_file.write( """    {NC,    NP,    0}
 };
 #endif
 """)
