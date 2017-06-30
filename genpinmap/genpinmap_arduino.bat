@@ -3,14 +3,14 @@
 :: GPIO AF function not supported:: python genpinmap_arduino.py NUCLEO_F030R8 "STM32F030R8Tx.xml"
 :: GPIO AF function not supported::python genpinmap_arduino.py DISCO_F051R8  "STM32F051R8Tx.xml"
 
-python genpinmap_arduino.py NUCLEO_F429ZI "STM32F429Z(E-G-I)Tx.xml"
-python genpinmap_arduino.py DISCO_F469NI  "STM32F469N(E-G-I)Hx.xml"
-python genpinmap_arduino.py DISCO_F407G   "STM32F407V(E-G)Tx.xml"
 python genpinmap_arduino.py NUCLEO_F030R8 "STM32F030R8Tx.xml"
 python genpinmap_arduino.py NUCLEO_F091RC "STM32F091R(B-C)Tx.xml"
-python genpinmap_arduino.py NUCLEO_L476RG "STM32L475R(C-E-G)Tx.xml"
 python genpinmap_arduino.py NUCLEO_F303RE "STM32F303R(D-E)Tx.xml"
+python genpinmap_arduino.py NUCLEO_F429ZI "STM32F429Z(E-G-I)Tx.xml"
+python genpinmap_arduino.py DISCO_F407G   "STM32F407V(E-G)Tx.xml"
+python genpinmap_arduino.py DISCO_F746NG  "STM32F746N(E-G)Hx.xml"
 python genpinmap_arduino.py NUCLEO_L053R8 "STM32L053R(6-8)Tx.xml"
+python genpinmap_arduino.py NUCLEO_L476RG "STM32L475R(C-E-G)Tx.xml"
 
 pause
 ::python genpinmap_arduino.py B96B_F446VE   "STM32F446V(C-E)Tx.xml"
