@@ -19,6 +19,9 @@
 #===============================================================================
 
 set -o nounset                              # Treat unset variables as an error
+NB_OK=0
+NB_KO=0
+NB_BUILD=0
 VERSION="0.1"
 LOG_FILE=/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log
 INO_FILE=examples/01.Basics/Blink/Blink.ino
@@ -55,12 +58,26 @@ check_result() {
   if [ $1 -ne 0 ]; then
     echo "$2 build KO: $1" >> $LOG_FILE
     echo -e "\033[1;31mKO\033[0m"
+	NB_KO=$((NB_KO+1))
   else
     echo "$2 build OK." >> $LOG_FILE
     echo -e "\033[1;32mOK\033[0m"
+	NB_OK=$((NB_OK+1))
   fi
   echo ""
 }
+
+print_stat() {
+   echo "Total number of build: $NB_BUILD" >> $LOG_FILE
+   echo "\t\tPASS: $NB_OK" >> $LOG_FILE
+   echo "\t\tFAIL: $NB_KO" >> $LOG_FILE
+
+   echo "Total number of build: $NB_BUILD"
+   echo "\t\tPASS: $NB_OK"
+   echo "\t\tFAIL: $NB_KO"
+   echo ""
+}
+
 
 build() {
   local Target=$1
@@ -69,7 +86,8 @@ build() {
   echo -ne "build \033[1;34m$Target\033[0m ..."
   #ex: ./arduino --board STM32:stm32:Nucleo_144:Nucleo_144_board=NUCLEO_F429ZI --verify $INO_FILE  >> $LOG_FILE 2>&1
   ./arduino --board STM32:stm32:${Pack}:board_part_num=$Target --verify $INO_FILE  >> $LOG_FILE 2>&1
-  check_result $? $Target 
+  check_result $? $Target
+  NB_BUILD=$((NB_BUILD+1))
 }
 
 # parse command line arguments
@@ -124,9 +142,11 @@ build DISCO_F100RB Disco
 build DISCO_F407VG Disco
 build DISCO_F746NG Disco
 
-build BLUEPILL_F103C8 Other
-build MAPLEMINI_F103CB Other
+#build BLUEPILL_F103C8 Other
+#build MAPLEMINI_F103CB Other
 
+
+print_stat
 
 echo "End Arduino build." >> $LOG_FILE
 echo "Logs available here: $LOG_FILE"
