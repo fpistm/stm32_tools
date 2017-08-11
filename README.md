@@ -2,13 +2,13 @@
 Useful tools for stm32
 
 ## build_arduino.sh (linux)
-Used to build sketch thanks Arduino CLI for all core variants.
+Used to build sketch(es) thanks Arduino CLI for all core variants.
 Launch this script at the top of Arduino IDE directory.
 **Examples:** 
   * To build all ino file found in _examples_ and  _libraries_ directories:
   
 `./build_arduino.sh -a`
-  * To build a specific sketch _\<path to my ino file\>/mysketck.ino_:
+  * To build a specific sketch _\<path to my ino file\>/mysketch.ino_:
   
 `./build_arduino.sh -s /tmp/SerialLoop.ino`
   
