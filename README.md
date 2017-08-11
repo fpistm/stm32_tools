@@ -7,6 +7,8 @@ Launch this script at the top of Arduino IDE directory.
 **Examples:** 
   * To build all ino file found in _examples_ and  _libraries_ directories:
   
+_Note: exclude_list.txt is used to filter sketches found._
+  
 `./build_arduino.sh -a`
   * To build a specific sketch _\<path to my ino file\>/mysketch.ino_:
   
