@@ -19,15 +19,29 @@
 #===============================================================================
 
 set -o nounset                              # Treat unset variables as an error
-NB_OK=0
-NB_KO=0
-NB_BUILD=0
-CURRENT_INO=1
-TOTAL_INO=1
+# Counter
+NB_BUILD_PASSED=0
+NB_BUILD_FAILED=0
+NB_BUILD_TOTAL=0
+CURRENT_SKETCH=1
+TOTAL_SKETCH=1
+TOTAL_BOARD=1
+
+# Other
 VERSION="0.1"
-LOG_FILE=/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log
-INO_FILE=examples/01.Basics/Blink/Blink.ino
-ALL_INO=0
+LOG_FILE="/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log"
+
+# Default
+DEFAULT_BOARD_FILE="hardware/STM32/stm32/boards.txt"
+DEFAULT_SKETCH="examples/01.Basics/Blink/Blink.ino"
+DEFAULT_BOARD="Nucleo_64.NUCLEO_F103RB"
+
+# List
+sketch_list=($DEFAULT_SKETCH)
+board_list=($DEFAULT_BOARD)
+
+# Option
+ALL_OPT=0
 
 ###############################################################################
 ## Help function
@@ -51,7 +65,7 @@ usage()
     echo "## Optionnal:"
     echo "##"
     echo "## -a: build all sketch found."
-	echo "## -s <sketch filepath>: ino file to build (default: $INO_FILE)"
+    echo "## -s <sketch filepath>: ino file to build (default: $DEFAULT_SKETCH)"
     echo "## -v: print version"
     echo "##"
     echo "############################################################"
@@ -60,67 +74,56 @@ usage()
 
 check_result() {
   if [ $1 -ne 0 ]; then
-    echo "$2 build KO: $1" >> $LOG_FILE
-    echo -e "\033[1;31mKO\033[0m"
-	NB_KO=$((NB_KO+1))
+    echo "$2 build FAILED: $1" >> $LOG_FILE
+    echo -e "\033[1;31mFAILED\033[0m"
+    NB_BUILD_FAILED=$((NB_BUILD_FAILED+1))
   else
-    echo "$2 build OK." >> $LOG_FILE
-    echo -e "\033[1;32mOK\033[0m"
-	NB_OK=$((NB_OK+1))
+    echo "$2 build PASSED." >> $LOG_FILE
+    echo -e "\033[1;32mPASSED\033[0m"
+    NB_BUILD_PASSED=$((NB_BUILD_PASSED+1))
   fi
-  echo ""
 }
 
 print_stat() {
-   echo "Total number of build: $NB_BUILD" >> $LOG_FILE
-   echo -e "\t\tPASSED: $NB_OK" >> $LOG_FILE
-   echo -e "\t\tFAILED: $NB_KO" >> $LOG_FILE
+   echo "Total number of build: $NB_BUILD_TOTAL" >> $LOG_FILE
+   echo -e "\t\tPASSED: $NB_BUILD_PASSED" >> $LOG_FILE
+   echo -e "\t\tFAILED: $NB_BUILD_FAILED" >> $LOG_FILE
 
-   echo "Total number of build: $NB_BUILD"
-   echo -e "\t\tPASSED: $NB_OK"
-   echo -e "\t\tFAILED: $NB_KO"
-   echo ""
+   echo "Total number of build: $NB_BUILD_TOTAL"
+   echo -e "\t\t\033[1;32mPASSED\033[0m: $NB_BUILD_PASSED"
+   echo -e "\t\t\033[1;31mFAILED\033[0m: $NB_BUILD_FAILED"
 }
 
 build_all() {
-  local Sketch=$INO_FILE
-  if [ $# -ne 0 ]; then
-    Sketch=$1
-  fi
-  echo "Sketch ($CURRENT_INO/$TOTAL_INO): $Sketch" >> $LOG_FILE
-  echo -e "Sketch ($CURRENT_INO/$TOTAL_INO): \033[1;36m$Sketch\033[0m"
-
-  build NUCLEO_F030R8 Nucleo_64 $Sketch
-  build NUCLEO_F091RC Nucleo_64 $Sketch
-  build NUCLEO_F103RB Nucleo_64 $Sketch
-  build NUCLEO_F207ZG Nucleo_144 $Sketch
-  build NUCLEO_F303RE Nucleo_64 $Sketch
-  build NUCLEO_F401RE Nucleo_64 $Sketch
-  build NUCLEO_F411RE Nucleo_64 $Sketch
-  build NUCLEO_F429ZI Nucleo_144 $Sketch
-
-  build NUCLEO_L053R8 Nucleo_64 $Sketch
-  build NUCLEO_L432KC Nucleo_32 $Sketch
-  build NUCLEO_L476RG Nucleo_64 $Sketch
-
-  build DISCO_F100RB Disco $Sketch
-  build DISCO_F407VG Disco $Sketch
-  build DISCO_F746NG Disco $Sketch
-
-  #build BLUEPILL_F103C8 Other $sketch_file
-  #build MAPLEMINI_F103CB Other $sketch_file
+  for sketch in ${sketch_list[@]}
+  do
+    echo "Sketch ($CURRENT_SKETCH/$TOTAL_SKETCH): $sketch" >> $LOG_FILE
+    echo -e "Sketch ($CURRENT_SKETCH/$TOTAL_SKETCH): \033[1;36m$sketch\033[0m"
+    if [ ! -f $sketch ]; then
+      echo "$sketch does not exist! Skip it!" >> $LOG_FILE
+      echo "$sketch does not exist! Skip it!"
+      continue
+    fi
+    for board in ${board_list[@]}
+    do
+      local pack=`echo $board | cut -d'.' -f1`
+      local target=`echo $board | cut -d'.' -f2`
+      build $pack $target $sketch
+    done
+    CURRENT_SKETCH=$((CURRENT_SKETCH+1))
+  done
 }
 
 build() {
-  local Target=$1
-  local Pack=$2
+  local Pack=$1
+  local Target=$2
   local Sketch=$3
   echo "build $Target" >> $LOG_FILE
   echo -ne "build \033[1;34m$Target\033[0m ..."
   #ex: ./arduino --board STM32:stm32:Nucleo_144:Nucleo_144_board=NUCLEO_F429ZI --verify $INO_FILE  >> $LOG_FILE 2>&1
   ./arduino --board STM32:stm32:${Pack}:board_part_num=$Target --verify $Sketch  >> $LOG_FILE 2>&1
   check_result $? $Target
-  NB_BUILD=$((NB_BUILD+1))
+  NB_BUILD_TOTAL=$((NB_BUILD_TOTAL+1))
 }
 
 # parse command line arguments
@@ -134,15 +137,15 @@ eval set -- "$options"
 while true ; do
     case "$1" in
     -a) echo "Build all sketches"
-		ALL_INO=1
+        ALL_OPT=1
         shift;;
-	-s) echo "Sketch to build: $2"
-        INO_FILE=$2
-        shift 2;;
     -h|-\?) usage
         shift;;
+    -s) echo "Sketch to build: $2"
+        sketch_list=($2)
+        shift 2;;
     -v) echo "`basename $0`: $VERSION"
-		exit 0
+        exit 0
         shift;;
     --) shift;
         break;;
@@ -156,33 +159,35 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-if [ $ALL_INO -eq 0 ]; then
-  if [ ! -f $INO_FILE ]; then
-    echo "$INO_FILE does not exist!"
-    exit 2
-  fi
-  build_all
-else
-  list=(`find examples libraries -name "*.ino" | grep -v -f exclude_list.txt`)
-
-  if [ ${#list[@]} -ne 0 ]; then
-    TOTAL_INO=${#list[@]}
-    echo "Number of ino files found: $TOTAL_INO"
-  else
-    echo "No ino files found!"
-    exit 3
-  fi
-  for i in ${list[@]}
-  do
-    build_all $i
-	CURRENT_INO=$((CURRENT_INO+1))
-  done
+# Manage sketch
+if [ $ALL_OPT -eq 1 ]; then
+  sketch_list=(`find examples libraries -name "*.ino" | grep -v -f exclude_list.txt`)
 fi
 
+TOTAL_SKETCH=${#sketch_list[@]}
+if [ $TOTAL_SKETCH -ne 0 ]; then
+  echo "Number of sketch(es) to build: $TOTAL_SKETCH"
+else
+  echo "No sketch to build!"
+  exit 2
+fi
+
+# Manage board
+board_list=(`grep -E ".+\.menu\.board_part_num\.[^\.]+=" $DEFAULT_BOARD_FILE | cut -d'=' -f1 | cut -d'.' -f1,4 | sort -t. -k1r,1r -k2`)
+TOTAL_BOARD=${#board_list[@]}
+if [ $TOTAL_BOARD -ne 0 ]; then
+  echo "Number of board(s) to build: $TOTAL_BOARD"
+else
+  echo "No board to build!"
+  exit 3
+fi
+
+# Do the job
+build_all
 print_stat
 
-echo "End Arduino build." >> $LOG_FILE
 echo "Logs available here: $LOG_FILE"
+echo "End Arduino build." >> $LOG_FILE
 echo "End Arduino build."
 
 exit 0
