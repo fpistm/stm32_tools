@@ -22,6 +22,8 @@ set -o nounset                              # Treat unset variables as an error
 NB_OK=0
 NB_KO=0
 NB_BUILD=0
+CURRENT_INO=1
+TOTAL_INO=1
 VERSION="0.1"
 LOG_FILE=/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log
 INO_FILE=examples/01.Basics/Blink/Blink.ino
@@ -71,12 +73,12 @@ check_result() {
 
 print_stat() {
    echo "Total number of build: $NB_BUILD" >> $LOG_FILE
-   echo "\t\tPASS: $NB_OK" >> $LOG_FILE
-   echo "\t\tFAIL: $NB_KO" >> $LOG_FILE
+   echo -e "\t\tPASSED: $NB_OK" >> $LOG_FILE
+   echo -e "\t\tFAILED: $NB_KO" >> $LOG_FILE
 
    echo "Total number of build: $NB_BUILD"
-   echo "\t\tPASS: $NB_OK"
-   echo "\t\tFAIL: $NB_KO"
+   echo -e "\t\tPASSED: $NB_OK"
+   echo -e "\t\tFAILED: $NB_KO"
    echo ""
 }
 
@@ -85,8 +87,8 @@ build_all() {
   if [ $# -ne 0 ]; then
     Sketch=$1
   fi
-  echo "Sketch: $Sketch" >> $LOG_FILE
-  echo -e "Sketch: \033[1;36m$Sketch\033[0m"
+  echo "Sketch ($CURRENT_INO/$TOTAL_INO): $Sketch" >> $LOG_FILE
+  echo -e "Sketch ($CURRENT_INO/$TOTAL_INO): \033[1;36m$Sketch\033[0m"
 
   build NUCLEO_F030R8 Nucleo_64 $Sketch
   build NUCLEO_F091RC Nucleo_64 $Sketch
@@ -161,9 +163,11 @@ if [ $ALL_INO -eq 0 ]; then
   fi
   build_all
 else
-  list=(`find portable  examples libraries -name "*.ino"`)
+  list=(`find examples libraries -name "*.ino" | grep -v -f exclude_list.txt`)
+
   if [ ${#list[@]} -ne 0 ]; then
-    echo "Number of ino files found: ${#list[@]}"
+    TOTAL_INO=${#list[@]}
+    echo "Number of ino files found: $TOTAL_INO"
   else
     echo "No ino files found!"
     exit 3
@@ -171,6 +175,7 @@ else
   for i in ${list[@]}
   do
     build_all $i
+	CURRENT_INO=$((CURRENT_INO+1))
   done
 fi
 
