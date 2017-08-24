@@ -26,10 +26,14 @@ NB_BUILD_TOTAL=0
 CURRENT_SKETCH=1
 TOTAL_SKETCH=1
 TOTAL_BOARD=1
+start_time=0
+end_time=0
 
 # Other
 VERSION="0.1"
 LOG_FILE="/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log"
+boards_pattern=""
+sketch_pattern=""
 
 # Default
 DEFAULT_BOARD_FILE="hardware/STM32/stm32/boards.txt"
@@ -54,7 +58,7 @@ usage()
     echo "############################################################"
     echo "##"
     echo "## `basename $0`"
-    echo "## [-a] [-s <sketch .ino path>][-v] "
+    echo "## [-a] [-b <board pattern>] [-i <.ino path>|[-s <sketch pattern>]] [-v] "
     echo "##"
     echo "## Launch this script at the top of Arduino IDE directory."
     echo "##"
@@ -65,7 +69,10 @@ usage()
     echo "## Optionnal:"
     echo "##"
     echo "## -a: build all sketch found."
-    echo "## -s <sketch filepath>: ino file to build (default: $DEFAULT_SKETCH)"
+    echo "## -b <board pattern>: pattern to find one or more boards to build"
+    echo "## -i <ino filepath>: single ino file to build (default: $DEFAULT_SKETCH)"
+    echo "##   or "
+    echo "## -s <sketch pattern>: pattern to find one or more sketch to build"
     echo "## -v: print version"
     echo "##"
     echo "############################################################"
@@ -88,10 +95,12 @@ print_stat() {
    echo "Total number of build: $NB_BUILD_TOTAL" >> $LOG_FILE
    echo -e "\t\tPASSED: $NB_BUILD_PASSED" >> $LOG_FILE
    echo -e "\t\tFAILED: $NB_BUILD_FAILED" >> $LOG_FILE
+   echo "Build duration `date -d@$(($end_time - $start_time)) -u +%H:%M:%S`" >> $LOG_FILE
 
    echo "Total number of build: $NB_BUILD_TOTAL"
    echo -e "\t\t\033[1;32mPASSED\033[0m: $NB_BUILD_PASSED"
    echo -e "\t\t\033[1;31mFAILED\033[0m: $NB_BUILD_FAILED"
+   echo "Build duration `date -d@$(($end_time - $start_time)) -u +%H:%M:%S`"
 }
 
 build_all() {
@@ -128,7 +137,7 @@ build() {
 
 # parse command line arguments
 # options may be followed by one colon to indicate they have a required arg
-options=`getopt -o as:hv -- "$@"`
+options=`getopt -o ab:hi:s:v -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -139,10 +148,16 @@ while true ; do
     -a) echo "Build all sketches"
         ALL_OPT=1
         shift;;
+    -b) echo "Board pattern to build: $2"
+        boards_pattern=$2
+        shift 2;;
     -h|-\?) usage
         shift;;
-    -s) echo "Sketch to build: $2"
+    -i) echo "Ino to build: $2"
         sketch_list=($2)
+        shift 2;;
+    -s) echo "Sketch pattern to build: $2"
+        sketch_pattern=$2
         shift 2;;
     -v) echo "`basename $0`: $VERSION"
         exit 0
@@ -160,8 +175,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # Manage sketch
-if [ $ALL_OPT -eq 1 ]; then
-  sketch_list=(`find examples libraries -name "*.ino" | grep -v -f exclude_list.txt`)
+if [ $ALL_OPT -eq 1 ] || [ -n "$sketch_pattern" ]; then
+  sketch_list=(`find examples libraries -name "*.ino" | grep -i -E "$sketch_pattern" | grep -v -f exclude_list.txt`)
 fi
 
 TOTAL_SKETCH=${#sketch_list[@]}
@@ -173,7 +188,7 @@ else
 fi
 
 # Manage board
-board_list=(`grep -E ".+\.menu\.board_part_num\.[^\.]+=" $DEFAULT_BOARD_FILE | cut -d'=' -f1 | cut -d'.' -f1,4 | sort -t. -k1r,1r -k2`)
+board_list=(`grep -E ".+\.menu\.board_part_num\.[^\.]+=" $DEFAULT_BOARD_FILE | grep -i -E "$boards_pattern" | cut -d'=' -f1 | cut -d'.' -f1,4 | sort -t. -k1r,1r -k2`)
 TOTAL_BOARD=${#board_list[@]}
 if [ $TOTAL_BOARD -ne 0 ]; then
   echo "Number of board(s) to build: $TOTAL_BOARD"
@@ -183,7 +198,11 @@ else
 fi
 
 # Do the job
+echo "Build start: `date`" >>  $LOG_FILE
+start_time=$(date +%s)
 build_all
+echo "Build end: `date`" >>  $LOG_FILE
+end_time=$(date +%s)
 print_stat
 
 echo "Logs available here: $LOG_FILE"
