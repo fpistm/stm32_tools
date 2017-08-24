@@ -3,7 +3,11 @@ ArduinoYun
 Bridge
 Esplora
 GSM
+OldStandardFirmata
 Robot_Control
-Robot Motor
+Robot_Motor
 SpacebrewYun
+StandardFirmataBLE
+StandardFirmataChipKIT
+StandardFirmataWiFi
 Temboo
