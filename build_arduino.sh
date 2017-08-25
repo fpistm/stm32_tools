@@ -1,14 +1,14 @@
 #!/bin/bash -
 #===============================================================================
 #
-#          FILE: build.sh
+#          FILE: build_arduino.sh
 #
-#         USAGE: ./build.sh
+#         USAGE: ./build_arduino.sh
 #
-#   DESCRIPTION:
+#   DESCRIPTION: Used to build sketch(es) thanks Arduino CLI for all core variants.
 #
-#       OPTIONS: ---
-#  REQUIREMENTS: ---
+#       OPTIONS: See usage()
+#  REQUIREMENTS: Launch this script at the top of Arduino IDE directory.
 #          BUGS: ---
 #         NOTES: ---
 #        AUTHOR: Frederic.Pillon <frederic.pillon@st.com>
@@ -23,20 +23,23 @@ set -o nounset                              # Treat unset variables as an error
 NB_BUILD_PASSED=0
 NB_BUILD_FAILED=0
 NB_BUILD_TOTAL=0
+NB_BUILD_SKIPPED=0
 CURRENT_SKETCH=1
-TOTAL_SKETCH=1
-TOTAL_BOARD=1
+TOTAL_SKETCH=0
+TOTAL_BOARD=0
 start_time=0
 end_time=0
 
 # Other
-VERSION="0.1"
+VERSION="0.2"
 LOG_FILE="/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log"
 boards_pattern=""
 sketch_pattern=""
+param=""
 
 # Default
-DEFAULT_BOARD_FILE="hardware/STM32/stm32/boards.txt"
+DEFAULT_CORE_PATH="hardware/STM32/stm32"
+DEFAULT_BOARD_FILE="$DEFAULT_CORE_PATH/boards.txt"
 DEFAULT_SKETCH="examples/01.Basics/Blink/Blink.ino"
 DEFAULT_BOARD="Nucleo_64.NUCLEO_F103RB"
 
@@ -79,28 +82,92 @@ usage()
     exit 0
 }
 
+#Arduino EXIT STATUS
+# 0 Success
+# 1 Build failed or upload failed
+# 2 Sketch not found
+# 3 Invalid (argument for) commandline option
+# 4 Preference passed to --get-pref does not exist
 check_result() {
-  if [ $1 -ne 0 ]; then
+  if [ $1 -eq 0 ]; then
+    echo "$2 build PASSED." >> $LOG_FILE
+    echo -e "\033[1;32mPASSED\033[0m"
+    NB_BUILD_PASSED=$((NB_BUILD_PASSED+1))
+  elif [ $1 -lt 5 ]; then
     echo "$2 build FAILED: $1" >> $LOG_FILE
     echo -e "\033[1;31mFAILED\033[0m"
     NB_BUILD_FAILED=$((NB_BUILD_FAILED+1))
   else
-    echo "$2 build PASSED." >> $LOG_FILE
-    echo -e "\033[1;32mPASSED\033[0m"
-    NB_BUILD_PASSED=$((NB_BUILD_PASSED+1))
+    echo "$2 build SKIPPED." >> $LOG_FILE
+    echo -e "\033[1;33mSKIPPED\033[0m"
+    NB_BUILD_SKIPPED=$((NB_BUILD_SKIPPED+1))
   fi
 }
 
 print_stat() {
-   echo "Total number of build: $NB_BUILD_TOTAL" >> $LOG_FILE
-   echo -e "\t\tPASSED: $NB_BUILD_PASSED" >> $LOG_FILE
-   echo -e "\t\tFAILED: $NB_BUILD_FAILED" >> $LOG_FILE
+   local _passed=`echo "scale=2;($NB_BUILD_PASSED*100)/$NB_BUILD_TOTAL" | bc`
+   local _failed=`echo "scale=2;($NB_BUILD_FAILED*100)/$NB_BUILD_TOTAL" | bc`
+   local _skipped=`echo "scale=2;($NB_BUILD_SKIPPED*100)/$NB_BUILD_TOTAL" | bc`
+
+   echo -e "Total number of build:\t\t$NB_BUILD_TOTAL" >> $LOG_FILE
+   echo -e "\t\tPASSED:\t\t$NB_BUILD_PASSED ($_passed%)" >> $LOG_FILE
+   echo -e "\t\tFAILED:\t\t$NB_BUILD_FAILED ($_failed%)" >> $LOG_FILE
+   echo -e "\t\tSKIPPED:\t$NB_BUILD_SKIPPED ($_passed%)" >> $LOG_FILE
    echo "Build duration `date -d@$(($end_time - $start_time)) -u +%H:%M:%S`" >> $LOG_FILE
 
-   echo "Total number of build: $NB_BUILD_TOTAL"
-   echo -e "\t\t\033[1;32mPASSED\033[0m: $NB_BUILD_PASSED"
-   echo -e "\t\t\033[1;31mFAILED\033[0m: $NB_BUILD_FAILED"
+   echo -e "Total number of build:\t\t$NB_BUILD_TOTAL"
+   echo -e "\t\t\033[1;32mPASSED\033[0m:\t\t$NB_BUILD_PASSED ($_passed%)"
+   echo -e "\t\t\033[1;31mFAILED\033[0m:\t\t$NB_BUILD_FAILED ($_failed%)"
+   echo -e "\t\t\033[1;33mSKIPPED\033[0m:\t$NB_BUILD_SKIPPED ($_skipped%)"
    echo "Build duration `date -d@$(($end_time - $start_time)) -u +%H:%M:%S`"
+}
+
+check_sketch_param_Serial() {
+  local _sketch=$1
+  local _serialx=`grep Serial[0-9] $_sketch`
+  if [ -n "$_serialx" ]; then
+    echo "Sketch requires to enable all Serial" >> $LOG_FILE
+    echo "Sketch requires to enable all Serial"
+    param="$param,Other_serial=enable_SerialAll"
+  fi
+}
+
+check_sketch_param_USB_HID() {
+  local _sketch=$1
+  local _usb_hid=`echo $_sketch | grep USB`
+  if [ -n "$_usb_hid" ]; then
+    echo "Sketch requires to enable USB HID" >> $LOG_FILE
+    echo "Sketch requires to enable USB HID"
+    param="$param,USB_interface=enable_HID"
+  fi
+}
+
+check_target_param() {
+  local _target=$1
+  local _serialx=`echo $param | grep Serial`
+  local _usb_hid=`echo $param | grep HID`
+  if [ -n "$_serialx" ]; then
+    # check if Serial1 are available in the variant
+    local isserial1=`grep -E "^\s*HardwareSerial\s+Serial1" $DEFAULT_CORE_PATH/variants/$_target/variant.cpp`
+    if [ -z "$isserial1" ]; then
+      echo "Serial1 not defined for this board, skip it." >> $LOG_FILE
+      check_result 5 $_target
+	  return 1
+    fi
+  fi
+  if [ -n "$_usb_hid" ]; then
+    local isUSB=""
+    if [ -f $DEFAULT_CORE_PATH/variants/$_target/usb/usbd_desc.h ]; then
+      # check if HID_Desc are available in the variant
+      isUSB=`grep -E "USBD_DescriptorsTypeDef\s+HID_Desc" $DEFAULT_CORE_PATH/variants/$_target/usb/usbd_desc.h`
+    fi
+    if [ -z "$isUSB" ]; then
+      echo "USB HID not supported by this board, skip it." >> $LOG_FILE
+      check_result 5 $_target
+	  return 2
+    fi
+  fi
+  return 0
 }
 
 build_all() {
@@ -113,26 +180,39 @@ build_all() {
       echo "$sketch does not exist! Skip it!"
       continue
     fi
+    # Check option
+    check_sketch_param_Serial $sketch
+    check_sketch_param_USB_HID $sketch
+
     for board in ${board_list[@]}
     do
       local pack=`echo $board | cut -d'.' -f1`
       local target=`echo $board | cut -d'.' -f2`
-      build $pack $target $sketch
+      echo "build $target" >> $LOG_FILE
+      echo -ne "build \033[1;34m$target\033[0m ..."
+      NB_BUILD_TOTAL=$((NB_BUILD_TOTAL+1)) 
+
+	  # Check if option are applicable for the target
+	  check_target_param $target
+      if [ $? -ne 0 ]; then
+        continue
+      fi
+      build $pack $target $sketch "$param"
     done
+	param=""
     CURRENT_SKETCH=$((CURRENT_SKETCH+1))
   done
 }
 
 build() {
-  local Pack=$1
-  local Target=$2
-  local Sketch=$3
-  echo "build $Target" >> $LOG_FILE
-  echo -ne "build \033[1;34m$Target\033[0m ..."
+  local _pack=$1
+  local _target=$2
+  local _sketch=$3
+  local _param=$4
+
   #ex: ./arduino --board STM32:stm32:Nucleo_144:Nucleo_144_board=NUCLEO_F429ZI --verify $INO_FILE  >> $LOG_FILE 2>&1
-  ./arduino --board STM32:stm32:${Pack}:board_part_num=$Target --verify $Sketch  >> $LOG_FILE 2>&1
-  check_result $? $Target
-  NB_BUILD_TOTAL=$((NB_BUILD_TOTAL+1))
+  ./arduino --board STM32:stm32:${_pack}:board_part_num=${_target}${_param} --verify ${_sketch}  >> $LOG_FILE 2>&1
+  check_result $? $_target
 }
 
 # parse command line arguments
