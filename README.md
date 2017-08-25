@@ -20,7 +20,7 @@ _Note: exclude_list.txt is used to filter sketches found._
 `./build_arduino.sh -s "08\.|09\."`
 
 will build all sketch in _examples/09.USB_ and _examples/08.Strings_ directories
-  * To build a specific set of of boards using a pattern::
+  * To build a specific set of of boards using a pattern:
   
 `./build_arduino.sh -b "F4"`
 
