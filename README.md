@@ -2,8 +2,10 @@
 Useful tools for stm32
 
 ## build_arduino.sh (linux)
-Used to build sketch(es) thanks Arduino CLI for all core variants.
+Used to build sketch(es) thanks Arduino CLI for all [Arduino_Core_STM32](https://github.com/stm32duino/Arduino_Core_STM32) variants.
+
 Launch this script at the top of Arduino IDE directory.
+
 **Examples:** 
   * To build all ino file found in _examples_ and  _libraries_ directories:
   
@@ -22,7 +24,7 @@ will build all sketch in _examples/09.USB_ and _examples/08.Strings_ directories
   
 `./build_arduino.sh -b "F4"`
 
-will build sketch for all variants name including *F4*.
+will build sketch for all variants name including **F4**.
 
 ## genpinmap (Moved to [Arduino_Tools](https://github.com/stm32duino/Arduino_Tools))
 
