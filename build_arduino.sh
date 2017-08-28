@@ -112,7 +112,7 @@ print_stat() {
    echo -e "Total number of build:\t\t$NB_BUILD_TOTAL" >> $LOG_FILE
    echo -e "\t\tPASSED:\t\t$NB_BUILD_PASSED ($_passed%)" >> $LOG_FILE
    echo -e "\t\tFAILED:\t\t$NB_BUILD_FAILED ($_failed%)" >> $LOG_FILE
-   echo -e "\t\tSKIPPED:\t$NB_BUILD_SKIPPED ($_passed%)" >> $LOG_FILE
+   echo -e "\t\tSKIPPED:\t$NB_BUILD_SKIPPED ($_skipped%)" >> $LOG_FILE
    echo "Build duration `date -d@$(($end_time - $start_time)) -u +%H:%M:%S`" >> $LOG_FILE
 
    echo -e "Total number of build:\t\t$NB_BUILD_TOTAL"
