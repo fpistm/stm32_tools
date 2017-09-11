@@ -1,0 +1,9 @@
+{
+  "builtInLibrariesFolders": "C:\\STM32\\arduino-1.8.4-git\\libraries",
+  "customBuildProperties": "build.warn_data_percentage=75,runtime.tools.arm-none-eabi-gcc.path=C:\\STM32\\arduino-1.8.4-git\\portable\\packages\\STM32\\tools\\arm-none-eabi-gcc\\6-2017-q1-update,runtime.tools.massStorageCopy.path=C:\\STM32\\arduino-1.8.4-git\\hardware\\stm\\tools,runtime.tools.CMSIS-4.5.0.path=C:\\STM32\\arduino-1.8.4-git\\portable\\packages\\arduino\\tools\\CMSIS\\4.5.0,build.mcu=cortex-m4,build.f_cpu=16000000L,build.series=STM32F4xx,build.board=NUCLEO_F429ZI,build.product_line=STM32F429xx,build.variant=NUCLEO_F429ZI,build.cmsis_lib_gcc=arm_cortexM4l_math,build.variant.path=C:\\STM32\\arduino-1.8.4-git\\hardware\\stm\\stm32\\variants\\NUCLEO_F429ZI",
+  "fqbn": "stm:stm32:Nucleo_144:Nucleo_144_board=NUCLEO_F429ZI",
+  "hardwareFolders": "C:\\STM32\\arduino-1.8.4-git\\hardware,C:\\STM32\\arduino-1.8.4-git\\portable\\packages",
+  "otherLibrariesFolders": "C:\\STM32\\arduino-1.8.4-git\\portable\\sketchbook\\libraries",
+  "runtime.ide.version": "10804",
+  "toolsFolders": "C:\\STM32\\arduino-1.8.4-git\\tools-builder,C:\\STM32\\arduino-1.8.4-git\\hardware\\tools\\avr,C:\\STM32\\arduino-1.8.4-git\\portable\\packages"
+}
