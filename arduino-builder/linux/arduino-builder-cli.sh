@@ -1,9 +1,9 @@
 #!/bin/bash -
 #===============================================================================
 #
-#          FILE: build_arduino.sh
+#          FILE: arduino-builder-cli.sh
 #
-#         USAGE: ./build_arduino.sh
+#         USAGE: ./arduino-builder-cli.sh
 #
 #   DESCRIPTION: Used to build sketch(es) thanks Arduino CLI for all core variants.
 #
@@ -32,12 +32,13 @@ end_time=0
 
 # Other
 VERSION="0.2"
-LOG_FILE="/tmp/build_arduino_`date +\%d_\%m_\%Y_\%H_\%M`.log"
+LOG_FILE="/tmp/`basename $0`_`date +\%d_\%m_\%Y_\%H_\%M`.log"
 boards_pattern=""
 sketch_pattern=""
 param=""
+myPath=`dirname $(readlink -f "\$0")`
 
-# Default
+# Default.
 DEFAULT_CORE_PATH="hardware/STM32/stm32"
 DEFAULT_BOARD_FILE="$DEFAULT_CORE_PATH/boards.txt"
 DEFAULT_SKETCH="examples/01.Basics/Blink/Blink.ino"
@@ -256,7 +257,7 @@ fi
 
 # Manage sketch
 if [ $ALL_OPT -eq 1 ] || [ -n "$sketch_pattern" ]; then
-  sketch_list=(`find examples libraries -name "*.ino" | grep -i -E "$sketch_pattern" | grep -v -f exclude_list.txt`)
+  sketch_list=(`find examples libraries -name "*.ino" | grep -i -E "$sketch_pattern" | grep -v -f $myPath/../conf/exclude_list.txt`)
 fi
 
 TOTAL_SKETCH=${#sketch_list[@]}
