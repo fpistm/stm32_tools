@@ -129,7 +129,7 @@ check_sketch_param_Serial() {
   if [ -n "$_serialx" ]; then
     echo "Sketch requires to enable all Serial" >> $LOG_FILE
     echo "Sketch requires to enable all Serial"
-    param="$param,Other_serial=enable_SerialAll"
+    param="$param,xserial=SerialAll"
   fi
 }
 
@@ -139,7 +139,7 @@ check_sketch_param_USB_HID() {
   if [ -n "$_usb_hid" ]; then
     echo "Sketch requires to enable USB HID" >> $LOG_FILE
     echo "Sketch requires to enable USB HID"
-    param="$param,USB_interface=enable_HID"
+    param="$param,usb=HID"
   fi
 }
 
@@ -212,7 +212,7 @@ build() {
   local _param=$4
 
   #ex: ./arduino --board STM32:stm32:Nucleo_144:Nucleo_144_board=NUCLEO_F429ZI --verify $INO_FILE  >> $LOG_FILE 2>&1
-  ./arduino --board STM32:stm32:${_pack}:board_part_num=${_target}${_param} --verify ${_sketch}  >> $LOG_FILE 2>&1
+  ./arduino --board STM32:stm32:${_pack}:pnum=${_target}${_param} --verify ${_sketch}  >> $LOG_FILE 2>&1
   check_result $? $_target
 }
 
@@ -269,7 +269,7 @@ else
 fi
 
 # Manage board
-board_list=(`grep -E ".+\.menu\.board_part_num\.[^\.]+=" $DEFAULT_BOARD_FILE | grep -i -E "$boards_pattern" | cut -d'=' -f1 | cut -d'.' -f1,4 | sort -t. -k1r,1r -k2`)
+board_list=(`grep -E ".+\.menu\.pnum\.[^\.]+=" $DEFAULT_BOARD_FILE | grep -i -E "$boards_pattern" | cut -d'=' -f1 | cut -d'.' -f1,4 | sort -t. -k1r,1r -k2`)
 TOTAL_BOARD=${#board_list[@]}
 if [ $TOTAL_BOARD -ne 0 ]; then
   echo "Number of board(s) to build: $TOTAL_BOARD"
