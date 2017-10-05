@@ -129,7 +129,9 @@ check_sketch_param_Serial() {
   if [ -n "$_serialx" ]; then
     echo "Sketch requires to enable all Serial" >> $LOG_FILE
     echo "Sketch requires to enable all Serial"
-    param="$param,xserial=SerialAll"
+    param="$param,xserial=all"
+  else
+    param="$param,xserial=generic"
   fi
 }
 
@@ -145,17 +147,7 @@ check_sketch_param_USB_HID() {
 
 check_target_param() {
   local _target=$1
-  local _serialx=`echo $param | grep Serial`
   local _usb_hid=`echo $param | grep HID`
-  if [ -n "$_serialx" ]; then
-    # check if Serial1 are available in the variant
-    local isserial1=`grep -E "^\s*HardwareSerial\s+Serial1" $DEFAULT_CORE_PATH/variants/$_target/variant.cpp`
-    if [ -z "$isserial1" ]; then
-      echo "Serial1 not defined for this board, skip it." >> $LOG_FILE
-      check_result 5 $_target
-	  return 1
-    fi
-  fi
   if [ -n "$_usb_hid" ]; then
     local isUSB=""
     if [ -f $DEFAULT_CORE_PATH/variants/$_target/usb/usbd_desc.h ]; then
@@ -165,7 +157,7 @@ check_target_param() {
     if [ -z "$isUSB" ]; then
       echo "USB HID not supported by this board, skip it." >> $LOG_FILE
       check_result 5 $_target
-	  return 2
+	  return 1
     fi
   fi
   return 0
@@ -193,8 +185,8 @@ build_all() {
       echo -ne "build \033[1;34m$target\033[0m ..."
       NB_BUILD_TOTAL=$((NB_BUILD_TOTAL+1)) 
 
-	  # Check if option are applicable for the target
-	  check_target_param $target
+      # Check if option are applicable for the target
+      check_target_param $target
       if [ $? -ne 0 ]; then
         continue
       fi
