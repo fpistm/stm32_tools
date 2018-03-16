@@ -30,5 +30,10 @@ will build sketch for all variants name including **F4**.
 
 ## gen_cmsis_startup_file_list.sh
 Used to generate the stm32_def_build.h file.
+
 Launch it at the root of [Arduino_Core_STM32](https://github.com/stm32duino/Arduino_Core_STM32)
 
+## gen_stm32yyxx_files.sh
+Used to generate stm32yyxx files to wrap HAL/LL files
+
+Launch it at the root of [Arduino_Core_STM32](https://github.com/stm32duino/Arduino_Core_STM32)
