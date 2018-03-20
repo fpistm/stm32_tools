@@ -1,7 +1,7 @@
 # stm32_tools
 Useful tools for stm32
 
-## build_arduino.sh (linux)
+## arduino-builder-cli.sh (linux)
 Used to build sketch(es) thanks Arduino CLI for all [Arduino_Core_STM32](https://github.com/stm32duino/Arduino_Core_STM32) variants.
 
 Launch this script at the top of Arduino IDE directory.
@@ -11,18 +11,18 @@ Launch this script at the top of Arduino IDE directory.
   
 _Note: exclude_list.txt is used to filter sketches found._
   
-`./build_arduino.sh -a`
+`./arduino-builder-cli.sh -a`
   * To build a specific ino _\<path to my ino file\>/mysketch.ino_:
   
-`./build_arduino.sh -i /tmp/SerialLoop.ino`
+`./arduino-builder-cli.sh -i /tmp/SerialLoop.ino`
   * To build a specific set of sketch using a pattern:
   
-`./build_arduino.sh -s "08\.|09\."`
+`./arduino-builder-cli.sh -s "08\.|09\."`
 
 will build all sketch in _examples/09.USB_ and _examples/08.Strings_ directories
   * To build a specific set of of boards using a pattern:
   
-`./build_arduino.sh -b "F4"`
+`./arduino-builder-cli.sh -b "F4"`
 
 will build sketch for all variants name including **F4**.
 
