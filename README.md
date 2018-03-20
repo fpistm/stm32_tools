@@ -37,3 +37,8 @@ Launch it at the root of [Arduino_Core_STM32](https://github.com/stm32duino/Ardu
 Used to generate stm32yyxx files to wrap HAL/LL files
 
 Launch it at the root of [Arduino_Core_STM32](https://github.com/stm32duino/Arduino_Core_STM32)
+
+## gen_peripheralpins_files.sh
+Used to generate all `PeripheralPins.c` files for all STM32 MCU xml file description provided with [STM32CubeMX](http://www.st.com/en/development-tools/stm32cubemx.html) using [genpinmap.py](https://github.com/stm32duino/Arduino_Tools/blob/master/src/genpinmap/genpinmap_arduino.py) script.
+
+Launch it from the same folder than [genpinmap.py](https://github.com/stm32duino/Arduino_Tools/blob/master/src/genpinmap/genpinmap_arduino.py) script.
