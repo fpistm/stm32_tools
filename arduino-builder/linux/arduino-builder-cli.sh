@@ -133,8 +133,6 @@ check_sketch_param_Serial() {
     echo "Sketch requires to enable all Serial" >> $LOG_FILE
     echo "Sketch requires to enable all Serial"
     param="$param,xserial=all"
-  else
-    param="$param,xserial=generic"
   fi
 }
 
