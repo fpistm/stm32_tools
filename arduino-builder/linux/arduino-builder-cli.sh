@@ -35,6 +35,7 @@ VERSION="0.2"
 LOG_FILE="/tmp/`basename $0`_`date +\%d_\%m_\%Y_\%H_\%M`.log"
 boards_pattern=""
 sketch_pattern=""
+sketch_file_list=""
 param=""
 myPath=`dirname $(readlink -f "\$0")`
 
@@ -62,7 +63,7 @@ usage()
     echo "############################################################"
     echo "##"
     echo "## `basename $0`"
-    echo "## [-a] [-b <board pattern>] [-i <.ino path>|[-s <sketch pattern>]] [-v] "
+    echo "## [-a] [-b <board pattern>] [-i <.ino path>| [-f <sketch file list> | [-s <sketch pattern>]] [-v] "
     echo "##"
     echo "## Launch this script at the top of Arduino IDE directory."
     echo "##"
@@ -75,6 +76,8 @@ usage()
     echo "## -a: build all sketch found."
     echo "## -b <board pattern>: pattern to find one or more boards to build"
     echo "## -i <ino filepath>: single ino file to build (default: $DEFAULT_SKETCH)"
+    echo "##   or "
+    echo "## -f <sketch file list>: file containing list of sketch to build"
     echo "##   or "
     echo "## -s <sketch pattern>: pattern to find one or more sketch to build"
     echo "## -v: print version"
@@ -210,7 +213,7 @@ build() {
 
 # parse command line arguments
 # options may be followed by one colon to indicate they have a required arg
-options=`getopt -o ab:hi:s:v -- "$@"`
+options=`getopt -o ab:hi:f:s:v -- "$@"`
 
 if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
 
@@ -228,6 +231,10 @@ while true ; do
         shift;;
     -i) echo "Ino to build: $2"
         sketch_list=($2)
+        shift 2;;
+    -f) echo "Sketch file list: $2"
+        sketch_file_list=$2
+        sketch_list=(`cat $2`)
         shift 2;;
     -s) echo "Sketch pattern to build: $2"
         sketch_pattern=$2
@@ -248,8 +255,10 @@ if [ $? -ne 0 ]; then
 fi
 
 # Manage sketch
-if [ $ALL_OPT -eq 1 ] || [ -n "$sketch_pattern" ]; then
-  sketch_list=(`find examples libraries -name "*.ino" | grep -i -E "$sketch_pattern" | grep -v -f $myPath/../conf/exclude_list.txt`)
+if [ -n "$sketch_file_list" ]; then
+  if [ $ALL_OPT -eq 1 ] || [ -n "$sketch_pattern" ]; then
+    sketch_list=(`find -L examples libraries portable/sketchbook/libraries/ -name "*.ino" | grep -i -E "$sketch_pattern" | grep -v -f $myPath/../conf/exclude_list.txt`)
+  fi
 fi
 
 TOTAL_SKETCH=${#sketch_list[@]}
