@@ -83,6 +83,7 @@ sketch_default = os.path.join(
 
 # List
 sketch_list = []
+board_list = []
 
 # Counter
 nb_build_total = 0
@@ -214,7 +215,6 @@ def find_inos():
 
 # Return a list of all board types and names using the board.txt file
 def find_board():
-    boardlist = []
     for path in [arduino_packages, hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
             for file in files:
@@ -226,20 +226,19 @@ def find_board():
                                 x = re.match(regex, line)
                                 if x:
                                     if args.board:
-                                        boardpattern = args.board[len(args.board) - 1]
-                                        reg = ".*(" + boardpattern + ").*"
+                                        reg = ".*(" + args.board + ").*"
                                         y = re.match(reg, x.group(0), re.IGNORECASE)
                                         if y:
                                             board_type = x.group(1)
                                             board_name = x.group(2)
                                             board = (board_type, board_name)
-                                            boardlist.append(board)
+                                            board_list.append(board)
                                     else:
                                         board_type = x.group(1)
                                         board_name = x.group(2)
                                         board = (board_type, board_name)
-                                        boardlist.append(board)
-    return sorted(boardlist)
+                                        board_list.append(board)
+    return sorted(board_list)
 
 
 # Check the status
@@ -288,7 +287,7 @@ def create_output_file():
 
 
 # Automatic run
-def run_auto(board_list):
+def run_auto():
     file = create_output_file()
     current_sketch = 0
     for files in sketch_list:
@@ -381,8 +380,6 @@ parser.add_argument(
     "-b",
     "--board",
     help="-b <board pattern>: pattern to find one or more boards to build",
-    action="append",
-    default=[],
 )
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-i", "--ino", help="-i <ino filepath>: single ino file to build")
@@ -399,7 +396,7 @@ group.add_argument(
 args = parser.parse_args()
 
 manage_inos()
-# Run builder
-variants = find_board()
+find_board()
 
-run_auto(variants)
+# Run builder
+run_auto()
