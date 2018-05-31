@@ -5,10 +5,8 @@ import sys
 import json
 import time
 import fnmatch
-import pathlib
 import shutil
 import subprocess
-import getpass
 import tempfile
 import argparse
 
@@ -100,14 +98,18 @@ def set_varOpt(board):
     serial_mode_default = "generic"
     usb_mode_default = "none"
     option_default = "osstd"
-    variantOption = "STM32:stm32:{var_type}:pnum={var_num},upload_method={upload_method},xserial={serial_mode},usb={usb_mode},opt={option}".format(
-        var_type=var_type_default,
-        var_num=var_num_default,
-        upload_method=upload_method_default,
+    variantOption = "STM32:stm32:{var_type}:pnum={var_num}".format(
+        var_type=var_type_default, var_num=var_num_default
+    )
+    variantOption += ",upload_method={upload_method}".format(
+        upload_method=upload_method_default
+    )
+    variantOption += ",xserial={serial_mode},usb={usb_mode},opt={option}".format(
         serial_mode=serial_mode_default,
         usb_mode=usb_mode_default,
         option=option_default,
     )
+
     return variantOption
 
 
@@ -221,7 +223,8 @@ def check_status(status, board_name, sketch_name):
         print("Error ! Check the run_command exit status ! Return code = ", status)
 
 
-# Create a "bin" directory for each board and copy all binary files from the builder output directory into it
+# Create a "bin" directory for each board and copy all binary files
+# from the builder output directory into it
 def bin_copy(board_name, sketch_name):
     board_bin = os.path.join(bin_dir, board_name)
     createFolder(board_bin)
