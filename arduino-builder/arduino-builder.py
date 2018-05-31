@@ -67,7 +67,16 @@ config_file.close()
 arduino_path = config["ARDUINO_PATH"]
 arduino_packages = config["ARDUINO_PACKAGES"]
 build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
-output_dir = config["OUPUT_DIR"]
+output_dir = os.path.join(config["OUPUT_DIR"], "build" + build_id)
+
+assert os.path.exists(arduino_path), (
+    "Path does not exist: %s . Please set this path in the json config file"
+    % arduino_path
+)
+assert os.path.exists(arduino_packages), (
+    "Path does not exist: %s . Please set this path in the json config file"
+    % arduino_packages
+)
 
 arduino_builder = os.path.join(arduino_path, "arduino-builder")
 hardware_path = os.path.join(arduino_path, "hardware")
@@ -75,8 +84,8 @@ libsketches_path_default = os.path.join(arduino_path, "libraries")
 tools_path = os.path.join(arduino_path, "tools-builder")
 
 # Ouput directory path
-bin_dir = os.path.join(output_dir, "binaries")
-std_dir = os.path.join(output_dir, "std_folder")
+bin_dir = "binaries"
+std_dir = "std_folder"
 
 # Default
 sketch_default = os.path.join(
@@ -198,7 +207,7 @@ def check_status(status, board_name, sketch_name):
 # Create a "bin" directory for each board and copy all binary files
 # from the builder output directory into it
 def bin_copy(board_name, sketch_name):
-    board_bin = os.path.join(bin_dir, board_name)
+    board_bin = os.path.join(output_dir, board_name, bin_dir)
     createFolder(board_bin)
     binfile = os.path.join(build_output_dir, sketch_name + ".bin")
     try:
@@ -213,13 +222,13 @@ def bin_copy(board_name, sketch_name):
 
 # Create the output file --> Ongoing improvment
 def create_output_file():
-    filename = os.path.join(output_dir, "Result_file" + build_id + ".txt")
+    filename = os.path.join(output_dir, "Result_file.txt")
     with open(filename, "w") as file:
-        file.write(" ************************************** \n")
-        file.write(" *********** OUTPUT / RESULT ********** \n")
-        file.write(" ************************************** \n")
-        file.write(time.strftime(" %A %d %B %Y %H:%M:%S "))
-        file.write("\n Full path = {} \n".format(os.path.abspath(output_dir)))
+        file.write("************************************** \n")
+        file.write("*********** OUTPUT / RESULT ********** \n")
+        file.write("************************************** \n")
+        file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
+        file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
     return filename
 
 
@@ -303,8 +312,7 @@ def build_all():
                 boardKo.append(board_name)
             check_status(status, board_name, sketch_name)
         with open(file, "a") as f:
-            f.write("\nSketch : " + sketch_name)
-            f.write("\nSketch location : " + files)
+            f.write("\nSketch : " + files)
             if len(boardOk):
                 f.write("\nBuild PASSED for these boards :\n")
                 for b in boardOk:
@@ -332,12 +340,11 @@ def build_all():
 # Run arduino builder command
 def build(cmd, board_name, sketch_name):
     boardstd = os.path.join(
-        std_dir, board_name
+        output_dir, board_name, std_dir
     )  # Board specific folder that contain stdout and stderr files
     createFolder(boardstd)
-    timer = time.strftime("%Y-%m-%d-%Hh%M")
-    stddout_name = timer + "_" + sketch_name + "_stdout.txt"
-    stdderr_name = timer + "_" + sketch_name + "_stderr.txt"
+    stddout_name = sketch_name + "_stdout.txt"
+    stdderr_name = sketch_name + "_stderr.txt"
     with open(os.path.join(boardstd, stddout_name), "w") as stdout, open(
         os.path.join(boardstd, stdderr_name), "w"
     ) as stderr:
@@ -349,25 +356,6 @@ def build(cmd, board_name, sketch_name):
 # Create output folders
 createFolder(build_output_dir)
 createFolder(output_dir)
-createFolder(bin_dir)
-createFolder(std_dir)
-
-assert os.path.exists(arduino_path), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % arduino_path
-)
-assert os.path.exists(arduino_packages), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % arduino_packages
-)
-assert os.path.exists(build_output_dir), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % build_output_dir
-)
-assert os.path.exists(output_dir), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % output_dir
-)
 
 # Parser
 parser = argparse.ArgumentParser(description="Automatic build script")
