@@ -99,71 +99,6 @@ def createFolder(folder):
         print("Error: Creating directory. " + folder)
 
 
-# Set up specific options to customise arduino builder command
-def set_varOpt(board):
-    var_type_default = board[0]
-    var_num_default = board[1]
-    upload_method_default = "STLink"
-    serial_mode_default = "generic"
-    usb_mode_default = "none"
-    option_default = "osstd"
-    variantOption = "STM32:stm32:{var_type}:pnum={var_num}".format(
-        var_type=var_type_default, var_num=var_num_default
-    )
-    variantOption += ",upload_method={upload_method}".format(
-        upload_method=upload_method_default
-    )
-    variantOption += ",xserial={serial_mode},usb={usb_mode},opt={option}".format(
-        serial_mode=serial_mode_default,
-        usb_mode=usb_mode_default,
-        option=option_default,
-    )
-
-    return variantOption
-
-
-# Configure arduino builder command
-def build(variant, sketch_path):
-    cmd = []
-    cmd.append(arduino_builder)
-    cmd.append("-hardware")
-    cmd.append(hardware_path)
-    cmd.append("-hardware")
-    cmd.append(arduino_packages)
-    cmd.append("-tools")
-    cmd.append(tools_path)
-    cmd.append("-tools")
-    cmd.append(arduino_packages)
-    cmd.append("-libraries")
-    cmd.append(libsketches_path_default)
-    cmd.append("-fqbn")
-    cmd.append(variant)
-    cmd.append("-ide-version=10805")
-    cmd.append("-build-path")
-    cmd.append(build_output_dir)
-    cmd.append("-verbose")
-    cmd.append(sketch_path)
-    return cmd
-
-
-# Run arduino builder command
-def run_command(cmd, board_name, sketch_name):
-    boardstd = os.path.join(
-        std_dir, board_name
-    )  # Board specific folder that contain stdout and stderr files
-    createFolder(boardstd)
-    timer = time.strftime("%Y-%m-%d-%Hh%M")
-    stddout_name = timer + "_" + sketch_name + "_stdout.txt"
-    stdderr_name = timer + "_" + sketch_name + "_stderr.txt"
-    with open(os.path.join(boardstd, stddout_name), "w") as stdout, open(
-        os.path.join(boardstd, stdderr_name), "w"
-    ) as stderr:
-        res = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
-        print("Building in progress ...")
-        res.wait()
-        return res.returncode
-
-
 # Manage sketches list
 def manage_inos():
     global sketch_list
@@ -286,6 +221,53 @@ def create_output_file():
     return filename
 
 
+# Set up specific options to customise arduino builder command
+def set_varOpt(board):
+    var_type_default = board[0]
+    var_num_default = board[1]
+    upload_method_default = "STLink"
+    serial_mode_default = "generic"
+    usb_mode_default = "none"
+    option_default = "osstd"
+    variantOption = "STM32:stm32:{var_type}:pnum={var_num}".format(
+        var_type=var_type_default, var_num=var_num_default
+    )
+    variantOption += ",upload_method={upload_method}".format(
+        upload_method=upload_method_default
+    )
+    variantOption += ",xserial={serial_mode},usb={usb_mode},opt={option}".format(
+        serial_mode=serial_mode_default,
+        usb_mode=usb_mode_default,
+        option=option_default,
+    )
+
+    return variantOption
+
+
+# Configure arduino builder command
+def build(variant, sketch_path):
+    cmd = []
+    cmd.append(arduino_builder)
+    cmd.append("-hardware")
+    cmd.append(hardware_path)
+    cmd.append("-hardware")
+    cmd.append(arduino_packages)
+    cmd.append("-tools")
+    cmd.append(tools_path)
+    cmd.append("-tools")
+    cmd.append(arduino_packages)
+    cmd.append("-libraries")
+    cmd.append(libsketches_path_default)
+    cmd.append("-fqbn")
+    cmd.append(variant)
+    cmd.append("-ide-version=10805")
+    cmd.append("-build-path")
+    cmd.append(build_output_dir)
+    cmd.append("-verbose")
+    cmd.append(sketch_path)
+    return cmd
+
+
 # Automatic run
 def run_auto():
     file = create_output_file()
@@ -343,6 +325,24 @@ def run_auto():
     print("PASSED = {}/{}".format(nb_build_passed, nb_build_total))
     print("FAILED = {}/{}".format(nb_build_failed, nb_build_total))
     print("Logs are available here: " + output_dir)
+
+
+# Run arduino builder command
+def run_command(cmd, board_name, sketch_name):
+    boardstd = os.path.join(
+        std_dir, board_name
+    )  # Board specific folder that contain stdout and stderr files
+    createFolder(boardstd)
+    timer = time.strftime("%Y-%m-%d-%Hh%M")
+    stddout_name = timer + "_" + sketch_name + "_stdout.txt"
+    stdderr_name = timer + "_" + sketch_name + "_stderr.txt"
+    with open(os.path.join(boardstd, stddout_name), "w") as stdout, open(
+        os.path.join(boardstd, stdderr_name), "w"
+    ) as stderr:
+        res = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
+        print("Building in progress ...")
+        res.wait()
+        return res.returncode
 
 
 # Create output folders
