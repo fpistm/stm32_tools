@@ -286,11 +286,13 @@ def build_all():
         for board in board_list:
             board_name = board[1]
             current_board += 1
-            print(
-                "\nBoard ({}/{}) : {}".format(
-                    current_board, len(board_list), board_name
+            sys.stdout.write(
+                "Build {} ({}/{})... ".format(
+                    board_name, current_board, len(board_list)
                 )
             )
+            sys.stdout.flush()
+
             command = create_command(board, files)
             status = build(command, board_name, sketch_name)
             if status == 0:
@@ -338,7 +340,6 @@ def build(cmd, board_name, sketch_name):
         os.path.join(boardstd, stdderr_name), "w"
     ) as stderr:
         res = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
-        print("Building in progress ...")
         res.wait()
         return res.returncode
 
