@@ -227,7 +227,6 @@ def set_varOpt(board):
     var_num_default = board[1]
     upload_method_default = "STLink"
     serial_mode_default = "generic"
-    usb_mode_default = "none"
     option_default = "osstd"
     variantOption = "STM32:stm32:{var_type}:pnum={var_num}".format(
         var_type=var_type_default, var_num=var_num_default
@@ -235,10 +234,8 @@ def set_varOpt(board):
     variantOption += ",upload_method={upload_method}".format(
         upload_method=upload_method_default
     )
-    variantOption += ",xserial={serial_mode},usb={usb_mode},opt={option}".format(
-        serial_mode=serial_mode_default,
-        usb_mode=usb_mode_default,
-        option=option_default,
+    variantOption += ",xserial={serial_mode},opt={option}".format(
+        serial_mode=serial_mode_default, option=option_default
     )
 
     return variantOption
