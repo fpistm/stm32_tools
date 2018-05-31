@@ -260,7 +260,9 @@ def create_command(board, sketch_path):
     cmd.append("-ide-version=10805")
     cmd.append("-build-path")
     cmd.append(build_output_dir)
-    cmd.append("-verbose")
+    cmd.append("-warnings=all")
+    if args.verbose:
+        cmd.append("-verbose")
     cmd.append(sketch_path)
     return cmd
 
@@ -389,6 +391,13 @@ group.add_argument(
     "--sketches",
     help=" -s <sketch pattern>: pattern to find one or more sketch to build",
 )
+parser.add_argument(
+    "-v",
+    "--verbose",
+    help="-v : enable arduino-builder verbose mode",
+    action="store_true",
+)
+
 args = parser.parse_args()
 
 manage_inos()
