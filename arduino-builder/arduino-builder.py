@@ -178,6 +178,18 @@ def manage_inos():
                 os.path.join(arduino_path, args.ino)
             ), "Ino path does not exist"
             sketch_list = [os.path.join(arduino_path, args.ino)]
+    # Inos listed in a file
+    elif args.file:
+        assert os.path.exists(args.file), "Sketches list file does not exist"
+        with open(args.file, "r") as f:
+            for line in f.readlines():
+                ino = line.rstrip()
+                if os.path.exists(ino):
+                    sketch_list.append(ino)
+                elif os.path.exists(os.path.join(arduino_path, ino)):
+                    sketch_list.append(os.path.join(arduino_path, ino))
+                else:
+                    print("Ignore %s as does not exist." % ino)
     # Defailt ino to build
     else:
         sketch_list = [sketch_default]
@@ -374,6 +386,11 @@ parser.add_argument(
 )
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-i", "--ino", help="-i <ino filepath>: single ino file to build")
+group.add_argument(
+    "-f",
+    "--file",
+    help=" -f <sketches list file>: file containing list of sketches to build",
+)
 group.add_argument(
     "-s",
     "--sketches",
