@@ -14,6 +14,8 @@ import argparse
 config_filename = "config.json"
 home = os.path.expanduser("~")
 tempdir = tempfile.gettempdir()
+build_id = time.strftime("_%Y-%m-%d_%H-%M-%S")
+
 try:
     config_file = open(config_filename, "r")
 except IOError:
@@ -64,7 +66,7 @@ config_file.close()
 # Common path
 arduino_path = config["ARDUINO_PATH"]
 arduino_packages = config["ARDUINO_PACKAGES"]
-build_output_dir = config["BUILD_OUPUT_DIR"]
+build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
 output_dir = config["OUPUT_DIR"]
 
 arduino_builder = os.path.join(arduino_path, "arduino-builder")
@@ -211,7 +213,7 @@ def bin_copy(board_name, sketch_name):
 
 # Create the output file --> Ongoing improvment
 def create_output_file():
-    filename = os.path.join(output_dir, time.strftime("Result_file_%Y-%m-%d.txt"))
+    filename = os.path.join(output_dir, "Result_file" + build_id + ".txt")
     with open(filename, "w") as file:
         file.write(" ************************************** \n")
         file.write(" *********** OUTPUT / RESULT ********** \n")
