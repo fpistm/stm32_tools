@@ -244,8 +244,8 @@ def set_varOpt(board):
     return variantOption
 
 
-# Configure arduino builder command
-def build(variant, sketch_path):
+# Create arduino builder command
+def create_command(board, sketch_path):
     cmd = []
     cmd.append(arduino_builder)
     cmd.append("-hardware")
@@ -259,7 +259,7 @@ def build(variant, sketch_path):
     cmd.append("-libraries")
     cmd.append(libsketches_path_default)
     cmd.append("-fqbn")
-    cmd.append(variant)
+    cmd.append(set_varOpt(board))
     cmd.append("-ide-version=10805")
     cmd.append("-build-path")
     cmd.append(build_output_dir)
@@ -269,7 +269,7 @@ def build(variant, sketch_path):
 
 
 # Automatic run
-def run_auto():
+def build_all():
     file = create_output_file()
     current_sketch = 0
     for files in sketch_list:
@@ -292,9 +292,8 @@ def run_auto():
                     current_board, len(board_list), board_name
                 )
             )
-            variant = set_varOpt(board)
-            command = build(variant, files)
-            status = run_command(command, board_name, sketch_name)
+            command = create_command(board, files)
+            status = build(command, board_name, sketch_name)
             if status == 0:
                 boardOk.append(board_name)
             if status == 1:
@@ -328,7 +327,7 @@ def run_auto():
 
 
 # Run arduino builder command
-def run_command(cmd, board_name, sketch_name):
+def build(cmd, board_name, sketch_name):
     boardstd = os.path.join(
         std_dir, board_name
     )  # Board specific folder that contain stdout and stderr files
@@ -399,4 +398,4 @@ manage_inos()
 find_board()
 
 # Run builder
-run_auto()
+build_all()
