@@ -279,29 +279,35 @@ def run_auto(sketch_list, board_list):
             command = build(variant, files)
             status = run_command(command, board_name, sketch_name)
             if status == 0:
-                boardOk.append(board)
+                boardOk.append(board_name)
             if status == 1:
-                boardKo.append(board)
+                boardKo.append(board_name)
             check_status(status, board_name, sketch_name)
         with open(file, "a") as f:
-            f.write("\n Sketch : " + sketch_name)
-            f.write("\n Sketch location : " + files)
-            f.write("\n Build PASSED for these boards : " + str(boardOk))
+            f.write("\nSketch : " + sketch_name)
+            f.write("\nSketch location : " + files)
+            if len(boardOk):
+                f.write("\nBuild PASSED for these boards :\n")
+                for b in boardOk:
+                    f.write(str(b) + "\n")
             f.write(
-                "\n Total build PASSED for this sketch : {} / {} ".format(
+                "Total build PASSED for this sketch : {} / {}".format(
                     len(boardOk), len(board_list)
                 )
             )
-            f.write("\n Build FAILED for these boards : " + str(boardKo))
+            if len(boardKo):
+                f.write("\nBuild FAILED for these boards :\n")
+                for b in boardKo:
+                    f.write(str(b))
             f.write(
-                "\n Total build FAILED for this sketch : {} / {} \n".format(
+                "\nTotal build FAILED for this sketch : {} / {}\n".format(
                     len(boardKo), len(board_list)
                 )
             )
     print("\n****************** PROCESSING COMPLETED ******************")
     print("PASSED = {}/{}".format(nb_build_passed, nb_build_total))
     print("FAILED = {}/{}".format(nb_build_failed, nb_build_total))
-    print("Logs are available at", output_dir)
+    print("Logs are available here: " + output_dir)
 
 
 # Create output folders
