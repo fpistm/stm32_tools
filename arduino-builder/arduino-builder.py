@@ -76,6 +76,14 @@ tools_path = os.path.join(arduino_path, "tools-builder")
 bin_dir = os.path.join(output_dir, "binaries")
 std_dir = os.path.join(output_dir, "std_folder")
 
+# Default
+sketch_default = os.path.join(
+    arduino_path, "examples", "01.Basics", "Blink", "Blink.ino"
+)
+
+# List
+sketch_list = []
+
 # Counter
 nb_build_total = 0
 nb_build_passed = 0
@@ -155,29 +163,45 @@ def run_command(cmd, board_name, sketch_name):
         return res.returncode
 
 
-# Find all .ino files
-def find_inos(args):
-    inoList = []
-    if args.ino:
-        assert os.path.exists(args.ino[0]), "Ino path does not exist"
-        inoList = args.ino
+# Manage sketches list
+def manage_inos():
+    global sketch_list
+    # Find all inos or all patterned inos
+    if args.all or args.sketches:
+        sketch_list = find_inos()
+    # Only one ino
+    elif args.ino:
+        if os.path.exists(args.ino):
+            sketch_list = [args.ino]
+        else:
+            assert os.path.exists(
+                os.path.join(arduino_path, args.ino)
+            ), "Ino path does not exist"
+            sketch_list = [os.path.join(arduino_path, args.ino)]
+    # Defailt ino to build
     else:
-        for root, dirs, files in os.walk(arduino_path):
-            for file in files:
-                if file.endswith(".ino"):
-                    if args.sketches:
-                        sketch2find = args.sketches[len(args.sketches) - 1]
-                        regex = ".*(" + sketch2find + ").*"
-                        x = re.match(regex, os.path.join(root, file), re.IGNORECASE)
-                        if x:
-                            inoList.append(os.path.join(root, x.group(0)))
-                    else:
-                        inoList.append(os.path.join(root, file))
+        sketch_list = [sketch_default]
+    assert len(sketch_list), "No sketch to build!"
+
+
+# Find all .ino files
+def find_inos():
+    inoList = []
+    for root, dirs, files in os.walk(arduino_path):
+        for file in files:
+            if file.endswith(".ino"):
+                if args.sketches:
+                    regex = ".*(" + args.sketches + ").*"
+                    x = re.match(regex, os.path.join(root, file), re.IGNORECASE)
+                    if x:
+                        inoList.append(os.path.join(root, x.group(0)))
+                else:
+                    inoList.append(os.path.join(root, file))
     return sorted(inoList)
 
 
 # Return a list of all board types and names using the board.txt file
-def find_board(args):
+def find_board():
     boardlist = []
     for path in [arduino_packages, hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
@@ -252,7 +276,7 @@ def create_output_file():
 
 
 # Automatic run
-def run_auto(sketch_list, board_list):
+def run_auto(board_list):
     file = create_output_file()
     current_sketch = 0
     for files in sketch_list:
@@ -348,29 +372,17 @@ parser.add_argument(
     action="append",
     default=[],
 )
-parser.add_argument(
-    "-i",
-    "--ino",
-    help="-i <ino filepath>: single ino file to build",
-    action="append",
-    default=[],
-)
-parser.add_argument(
+group = parser.add_mutually_exclusive_group()
+group.add_argument("-i", "--ino", help="-i <ino filepath>: single ino file to build")
+group.add_argument(
     "-s",
     "--sketches",
     help=" -s <sketch pattern>: pattern to find one or more sketch to build",
-    action="append",
-    default=[],
 )
 args = parser.parse_args()
 
+manage_inos()
 # Run builder
-sketch_default = arduino_path + r"/examples/01.Basics/Blink/Blink.ino"
-sketches = find_inos(args)
-variants = find_board(args)
+variants = find_board()
 
-if len(sys.argv) < 2:  # Si aucun args
-    sketches = [sketch_default]
-    run_auto(sketches, variants)
-else:
-    run_auto(sketches, variants)
+run_auto(variants)
