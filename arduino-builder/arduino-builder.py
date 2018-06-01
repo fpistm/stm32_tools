@@ -28,32 +28,32 @@ except IOError:
         build_output_dir = (
             tempdir + "\\temp_arduinoBuilderOutput"
         )  # Windows 7 temporary directory using by arduino builder
-        output_dir = home + "\\arduinoBuilderOutput"  # output directory
+        root_output_dir = home + "\\arduinoBuilderOutput"  # output directory
     elif sys.platform.startswith("linux"):
         print("Platform is Linux")
         arduino_path = home + "/Documents/arduino-1.8.5"
         arduino_packages = home + "/.arduino15/packages"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
-        output_dir = home + "/Documents/arduinoBuilderOutput"
+        root_output_dir = home + "/Documents/arduinoBuilderOutput"
     elif sys.platform.startswith("darwin"):
         print("Platform is Mac OSX")
         arduino_path = home + "/Applications/Arduino/"
         arduino_packages = home + "/Library/Arduino15/packages"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
-        output_dir = home + "/Documents/arduinoBuilderOutput"
+        root_output_dir = home + "/Documents/arduinoBuilderOutput"
     else:
         print("Platform unknown")
         arduino_path = "<Set Arduino install path>"
         arduino_packages = "<Set Arduino packages install path>"
         build_output_dir = "<Set arduino builder temporary folder install path>"
-        output_dir = "<Set your output directory path>"
+        root_output_dir = "<Set your output directory path>"
     config_file.write(
         json.dumps(
             {
                 "ARDUINO_PATH": arduino_path,
                 "ARDUINO_PACKAGES": arduino_packages,
                 "BUILD_OUPUT_DIR": build_output_dir,
-                "OUPUT_DIR": output_dir,
+                "ROOT_OUPUT_DIR": root_output_dir,
             }
         )
     )
@@ -67,7 +67,7 @@ config_file.close()
 arduino_path = config["ARDUINO_PATH"]
 arduino_packages = config["ARDUINO_PACKAGES"]
 build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
-output_dir = os.path.join(config["OUPUT_DIR"], "build" + build_id)
+root_output_dir = config["ROOT_OUPUT_DIR"]
 
 assert os.path.exists(arduino_path), (
     "Path does not exist: %s . Please set this path in the json config file"
@@ -82,6 +82,8 @@ arduino_builder = os.path.join(arduino_path, "arduino-builder")
 hardware_path = os.path.join(arduino_path, "hardware")
 libsketches_path_default = os.path.join(arduino_path, "libraries")
 tools_path = os.path.join(arduino_path, "tools-builder")
+output_dir = os.path.join(root_output_dir, "build" + build_id)
+
 
 # Ouput directory path
 bin_dir = "binaries"
@@ -102,12 +104,31 @@ nb_build_passed = 0
 nb_build_failed = 0
 
 
+# Create a folder if not exists
 def createFolder(folder):
     try:
         if not os.path.exists(folder):
             os.makedirs(folder)
     except OSError:
         print("Error: Creating directory. " + folder)
+
+
+# Delete targeted folder recursively
+def deleteFolder(folder):
+    if os.path.isdir(folder):
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+# Create the output file --> Ongoing improvment
+def create_output_file():
+    filename = os.path.join(output_dir, "Result_file.txt")
+    with open(filename, "w") as file:
+        file.write("************************************** \n")
+        file.write("*********** OUTPUT / RESULT ********** \n")
+        file.write("************************************** \n")
+        file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
+        file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
+    return filename
 
 
 # Manage sketches list
@@ -218,18 +239,6 @@ def bin_copy(board_name, sketch_name):
             e.strerror,
         )
         raise
-
-
-# Create the output file --> Ongoing improvment
-def create_output_file():
-    filename = os.path.join(output_dir, "Result_file.txt")
-    with open(filename, "w") as file:
-        file.write("************************************** \n")
-        file.write("*********** OUTPUT / RESULT ********** \n")
-        file.write("************************************** \n")
-        file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
-        file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
-    return filename
 
 
 # Set up specific options to customise arduino builder command
@@ -353,10 +362,6 @@ def build(cmd, board_name, sketch_name):
         return res.returncode
 
 
-# Create output folders
-createFolder(build_output_dir)
-createFolder(output_dir)
-
 # Parser
 parser = argparse.ArgumentParser(description="Automatic build script")
 parser.add_argument(
@@ -369,6 +374,12 @@ parser.add_argument(
     "-b",
     "--board",
     help="-b <board pattern>: pattern to find one or more boards to build",
+)
+parser.add_argument(
+    "-c",
+    "--clean",
+    help="-c: clean output directory by deleting %s folder" % root_output_dir,
+    action="store_true",
 )
 group = parser.add_mutually_exclusive_group()
 group.add_argument("-i", "--ino", help="-i <ino filepath>: single ino file to build")
@@ -391,8 +402,19 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+# Clean previous build results
+if args.clean:
+    deleteFolder(root_output_dir)
+
+# Create output folders
+createFolder(build_output_dir)
+createFolder(output_dir)
+
 manage_inos()
 find_board()
 
 # Run builder
 build_all()
+
+# Remove build output
+deleteFolder(build_output_dir)
