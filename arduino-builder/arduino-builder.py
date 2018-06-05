@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import os
 import re
 import sys
@@ -93,10 +94,12 @@ std_dir = "std_folder"
 sketch_default = os.path.join(
     arduino_path, "examples", "01.Basics", "Blink", "Blink.ino"
 )
+exclude_file_default = os.path.join("conf","exclude_list.txt")
 
 # List
 sketch_list = []
 board_list = []
+exclude_list=[]
 
 # Counter
 nb_build_total = 0
@@ -119,7 +122,7 @@ def deleteFolder(folder):
         shutil.rmtree(folder, ignore_errors=True)
 
 
-# Create the output file --> Ongoing improvment
+# Create the output file 
 def create_output_file():
     filename = os.path.join(output_dir, "Result_file.txt")
     with open(filename, "w") as file:
@@ -130,13 +133,46 @@ def create_output_file():
         file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
     return filename
 
-
+def manage_exclude_list(file):
+    global exclude_list
+    temp_list=[]
+    newliste=[]
+    i=0  
+    count=0
+    with open(file, "r") as f:
+        for line in f.readlines():
+            ino = line.rstrip()
+            exclude_list.append(ino)
+        print("List of excluded sketches : ",exclude_list) 
+    temp_list = find_inos() 
+    print("LEN AVANT EXCLUSION =", len(temp_list))
+    if exclude_list: 
+        while i<len(exclude_list):
+            y=0
+            regex = ".*(" + exclude_list[i]+ ").*"
+            while y<len(temp_list):
+                x = re.match(regex, temp_list[y], re.IGNORECASE)
+                if x: 
+                    count+=1
+                    temp_list.remove(x.group(0))
+                y+=1
+            i+=1 
+        print("NB EXCLUSION =", count)            
+    return temp_list
+   
 # Manage sketches list
 def manage_inos():
     global sketch_list
+    global exclude_list
     # Find all inos or all patterned inos
     if args.all or args.sketches:
-        sketch_list = find_inos()
+        if args.exclude:
+            assert os.path.exists(args.exclude), "Exclude list file does not exist"
+            sketch_list = manage_exclude_list(args.exclude)
+        elif os.path.exists(exclude_file_default):
+            sketch_list = manage_exclude_list(exclude_file_default)
+        else:
+            sketch_list = find_inos() 
     # Only one ino
     elif args.ino:
         if os.path.exists(args.ino):
@@ -158,7 +194,7 @@ def manage_inos():
                     sketch_list.append(os.path.join(arduino_path, ino))
                 else:
                     print("Ignore %s as does not exist." % ino)
-    # Defailt ino to build
+    # Default ino to build
     else:
         sketch_list = [sketch_default]
     assert len(sketch_list), "No sketch to build!"
@@ -222,7 +258,7 @@ def check_status(status, board_name, sketch_name):
         print("FAILED")
         nb_build_failed += 1
     else:
-        print("Error ! Check the run_command exit status ! Return code = ", status)
+        print("Error ! Check the run_command exit status ! Return code = " + status)
 
 
 # Create a "bin" directory for each board and copy all binary files
@@ -235,8 +271,8 @@ def bin_copy(board_name, sketch_name):
         shutil.copy(binfile, os.path.abspath(board_bin))
     except OSError as e:
         print(
-            "Impossible to copy the binary from the arduino builder output: ",
-            e.strerror,
+            "Impossible to copy the binary from the arduino builder output: " +
+            e.strerror
         )
         raise
 
@@ -334,7 +370,7 @@ def build_all():
             if len(boardKo):
                 f.write("\nBuild FAILED for these boards :\n")
                 for b in boardKo:
-                    f.write(str(b))
+                    f.write(str(b)+ "\n")
             f.write(
                 "\nTotal build FAILED for this sketch : {} / {}\n".format(
                     len(boardKo), len(board_list)
@@ -394,6 +430,11 @@ group.add_argument(
     help=" -s <sketch pattern>: pattern to find one or more sketch to build",
 )
 parser.add_argument(
+    "-e",
+    "--exclude",
+    help="-e <exclude list file>: file containing pattern of sketches to ignore | Default path : <working directory>\conf\exclude_list.txt ", 
+)
+parser.add_argument(
     "-v",
     "--verbose",
     help="-v : enable arduino-builder verbose mode",
@@ -405,7 +446,7 @@ args = parser.parse_args()
 # Clean previous build results
 if args.clean:
     deleteFolder(root_output_dir)
-
+    
 # Create output folders
 createFolder(build_output_dir)
 createFolder(output_dir)
