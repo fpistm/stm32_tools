@@ -39,24 +39,28 @@ except IOError:
             tempdir + "\\temp_arduinoBuilderOutput"
         )  # Windows 7 temporary directory using by arduino builder
         root_output_dir = home + "\\arduinoBuilderOutput"  # output directory
+        sketchbook_path = home + "\\My Documents\\Arduino"
     elif sys.platform.startswith("linux"):
         print("Platform is Linux")
         arduino_path = home + "/Documents/arduino-1.8.5"
         arduino_packages = home + "/.arduino15/packages"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
         root_output_dir = home + "/Documents/arduinoBuilderOutput"
+        sketchbook_path = home + "/Documents/Arduino"
     elif sys.platform.startswith("darwin"):
         print("Platform is Mac OSX")
         arduino_path = home + "/Applications/Arduino/"
         arduino_packages = home + "/Library/Arduino15/packages"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
         root_output_dir = home + "/Documents/arduinoBuilderOutput"
+        sketchbook_path = home + "/Documents/Arduino"
     else:
         print("Platform unknown")
         arduino_path = "<Set Arduino install path>"
         arduino_packages = "<Set Arduino packages install path>"
         build_output_dir = "<Set arduino builder temporary folder install path>"
         root_output_dir = "<Set your output directory path>"
+        sketchbook_path = "<Set the sketchbook location>"
     config_file.write(
         json.dumps(
             {
@@ -64,6 +68,7 @@ except IOError:
                 "ARDUINO_PACKAGES": arduino_packages,
                 "BUILD_OUPUT_DIR": build_output_dir,
                 "ROOT_OUPUT_DIR": root_output_dir,
+                "SKETCHBOOK_PATH": sketchbook_path,
             }
         )
     )
@@ -78,6 +83,7 @@ arduino_path = config["ARDUINO_PATH"]
 arduino_packages = config["ARDUINO_PACKAGES"]
 build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
 root_output_dir = config["ROOT_OUPUT_DIR"]
+sketchbook_path = config["SKETCHBOOK_PATH"]
 
 assert os.path.exists(arduino_path), (
     "Path does not exist: %s . Please set this path in the json config file"
@@ -88,9 +94,15 @@ assert os.path.exists(arduino_packages), (
     % arduino_packages
 )
 
+assert os.path.exists(sketchbook_path), (
+    "Path does not exist: %s . Please set this path in the json config file"
+    % sketchbook_path
+)
+
 arduino_builder = os.path.join(arduino_path, "arduino-builder")
 hardware_path = os.path.join(arduino_path, "hardware")
-libsketches_path_default = os.path.join(arduino_path, "libraries")
+lib_path_default = os.path.join(arduino_path, "libraries")
+additional_lib_path = os.path.join(sketchbook_path,"libraries")
 tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
 
@@ -145,7 +157,6 @@ def create_output_file():
 def manage_exclude_list(file):
     global exclude_list
     temp_list=[]
-    newliste=[]
     i=0
     count=0
     with open(file, "r") as f:
@@ -154,7 +165,7 @@ def manage_exclude_list(file):
             exclude_list.append(ino)
         print("List of excluded sketches : ",exclude_list)
     temp_list = find_inos()
-    print("LEN AVANT EXCLUSION =", len(temp_list))
+    print("LENGTH AVANT EXCLUSION =", len(temp_list))
     if exclude_list:
         while i<len(exclude_list):
             y=0
@@ -319,7 +330,9 @@ def create_command(board, sketch_path):
     cmd.append("-tools")
     cmd.append(arduino_packages)
     cmd.append("-libraries")
-    cmd.append(libsketches_path_default)
+    cmd.append(lib_path_default)
+    cmd.append("-libraries")
+    cmd.append(additional_lib_path)
     cmd.append("-fqbn")
     cmd.append(set_varOpt(board))
     cmd.append("-ide-version=10805")
@@ -385,9 +398,14 @@ def build_all():
                     len(boardKo), len(board_list)
                 )
             )
+    with open(file, "a") as f:
+        f.write("\n****************** PROCESSING COMPLETED ******************\n")
+        f.write("TOTAL PASSED : {} % \n".format(nb_build_passed/nb_build_total*100))
+        f.write("TOTAL FAILED : {} % \n".format(nb_build_failed/nb_build_total*100))
+        f.write("Logs are available here: " + output_dir)
     print("\n****************** PROCESSING COMPLETED ******************")
-    print("PASSED = {}/{}".format(nb_build_passed, nb_build_total))
-    print("FAILED = {}/{}".format(nb_build_failed, nb_build_total))
+    print("PASSED = {}/{} ({}%) ".format(nb_build_passed, nb_build_total,round(nb_build_passed/nb_build_total*100)))
+    print("FAILED = {}/{} ({}%) ".format(nb_build_failed, nb_build_total,round(nb_build_failed/nb_build_total*100)))
     print("Logs are available here: " + output_dir)
 
 
