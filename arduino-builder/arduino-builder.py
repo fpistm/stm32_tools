@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
 
+# File name            : arduino-builder.py
+# Author               : Angela RANDOLPH <angela.randolph@reseau.eseo.fr>
+# Other contributors   : Frederic PILLON <frederic.pillon@st.com>
+# Created              : 26/04/2018
+# Last Modified        : 05/06/2018
+# Python Version       : 2.7
+
+# Description         : Used to build sketch(es) thanks to Arduino Builder for all core variants. 
+
 import os
 import re
 import sys
@@ -122,7 +131,7 @@ def deleteFolder(folder):
         shutil.rmtree(folder, ignore_errors=True)
 
 
-# Create the output file 
+# Create the output file
 def create_output_file():
     filename = os.path.join(output_dir, "Result_file.txt")
     with open(filename, "w") as file:
@@ -137,29 +146,29 @@ def manage_exclude_list(file):
     global exclude_list
     temp_list=[]
     newliste=[]
-    i=0  
+    i=0
     count=0
     with open(file, "r") as f:
         for line in f.readlines():
             ino = line.rstrip()
             exclude_list.append(ino)
-        print("List of excluded sketches : ",exclude_list) 
-    temp_list = find_inos() 
+        print("List of excluded sketches : ",exclude_list)
+    temp_list = find_inos()
     print("LEN AVANT EXCLUSION =", len(temp_list))
-    if exclude_list: 
+    if exclude_list:
         while i<len(exclude_list):
             y=0
             regex = ".*(" + exclude_list[i]+ ").*"
             while y<len(temp_list):
                 x = re.match(regex, temp_list[y], re.IGNORECASE)
-                if x: 
+                if x:
                     count+=1
                     temp_list.remove(x.group(0))
                 y+=1
             i+=1 
-        print("NB EXCLUSION =", count)            
+        print("NB EXCLUSION =", count)
     return temp_list
-   
+
 # Manage sketches list
 def manage_inos():
     global sketch_list
@@ -172,7 +181,7 @@ def manage_inos():
         elif os.path.exists(exclude_file_default):
             sketch_list = manage_exclude_list(exclude_file_default)
         else:
-            sketch_list = find_inos() 
+            sketch_list = find_inos()
     # Only one ino
     elif args.ino:
         if os.path.exists(args.ino):
@@ -446,7 +455,7 @@ args = parser.parse_args()
 # Clean previous build results
 if args.clean:
     deleteFolder(root_output_dir)
-    
+
 # Create output folders
 createFolder(build_output_dir)
 createFolder(output_dir)
