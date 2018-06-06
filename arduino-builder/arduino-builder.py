@@ -6,7 +6,7 @@
 # Created              : 26/04/2018
 # Python Version       : 2.7 / 3.x
 
-# Description         : Used to build sketch(es) thanks to Arduino Builder for all core variants. 
+# Description         : Used to build sketch(es) thanks to Arduino Builder for all core variants.
 
 import os
 import re
@@ -101,7 +101,7 @@ assert os.path.exists(sketchbook_path), (
 arduino_builder = os.path.join(arduino_path, "arduino-builder")
 hardware_path = os.path.join(arduino_path, "hardware")
 lib_path_default = os.path.join(arduino_path, "libraries")
-additional_lib_path = os.path.join(sketchbook_path,"libraries")
+additional_lib_path = os.path.join(sketchbook_path, "libraries")
 tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
 
@@ -114,12 +114,12 @@ std_dir = "std_folder"
 sketch_default = os.path.join(
     arduino_path, "examples", "01.Basics", "Blink", "Blink.ino"
 )
-exclude_file_default = os.path.join("conf","exclude_list.txt")
+exclude_file_default = os.path.join("conf", "exclude_list.txt")
 
 # List
 sketch_list = []
 board_list = []
-exclude_list=[]
+exclude_list = []
 
 # Counter
 nb_build_total = 0
@@ -153,6 +153,7 @@ def create_output_file():
         file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
     return filename
 
+
 def manage_exclude_list(file):
     global exclude_list
     with open(file, "r") as f:
@@ -166,6 +167,7 @@ def manage_exclude_list(file):
                 x = re.match(regex, s, re.IGNORECASE)
                 if x:
                     sketch_list.remove(x.group(0))
+
 
 # Manage sketches list
 def manage_inos():
@@ -277,8 +279,8 @@ def bin_copy(board_name, sketch_name):
         shutil.copy(binfile, os.path.abspath(board_bin))
     except OSError as e:
         print(
-            "Impossible to copy the binary from the arduino builder output: " +
-            e.strerror
+            "Impossible to copy the binary from the arduino builder output: "
+            + e.strerror
         )
         raise
 
@@ -378,7 +380,7 @@ def build_all():
             if len(boardKo):
                 f.write("\nBuild FAILED for these boards :\n")
                 for b in boardKo:
-                    f.write(str(b)+ "\n")
+                    f.write(str(b) + "\n")
             f.write(
                 "\nTotal build FAILED for this sketch : {} / {}\n".format(
                     len(boardKo), len(board_list)
@@ -386,12 +388,24 @@ def build_all():
             )
     with open(file, "a") as f:
         f.write("\n****************** PROCESSING COMPLETED ******************\n")
-        f.write("TOTAL PASSED : {} % \n".format(nb_build_passed/nb_build_total*100))
-        f.write("TOTAL FAILED : {} % \n".format(nb_build_failed/nb_build_total*100))
+        f.write("TOTAL PASSED : {} % \n".format(nb_build_passed / nb_build_total * 100))
+        f.write("TOTAL FAILED : {} % \n".format(nb_build_failed / nb_build_total * 100))
         f.write("Logs are available here: " + output_dir)
     print("\n****************** PROCESSING COMPLETED ******************")
-    print("PASSED = {}/{} ({}%) ".format(nb_build_passed, nb_build_total,round(nb_build_passed/nb_build_total*100)))
-    print("FAILED = {}/{} ({}%) ".format(nb_build_failed, nb_build_total,round(nb_build_failed/nb_build_total*100)))
+    print(
+        "PASSED = {}/{} ({}%) ".format(
+            nb_build_passed,
+            nb_build_total,
+            round(nb_build_passed / nb_build_total * 100),
+        )
+    )
+    print(
+        "FAILED = {}/{} ({}%) ".format(
+            nb_build_failed,
+            nb_build_total,
+            round(nb_build_failed / nb_build_total * 100),
+        )
+    )
     print("Logs are available here: " + output_dir)
 
 
@@ -445,7 +459,7 @@ group.add_argument(
 parser.add_argument(
     "-e",
     "--exclude",
-    help="-e <exclude list file>: file containing pattern of sketches to ignore | Default path : <working directory>\conf\exclude_list.txt ", 
+    help="-e <exclude list file>: file containing pattern of sketches to ignore | Default path : <working directory>\conf\exclude_list.txt ",
 )
 parser.add_argument(
     "-v",
