@@ -4,8 +4,7 @@
 # Author               : Angela RANDOLPH <angela.randolph@reseau.eseo.fr>
 # Other contributors   : Frederic PILLON <frederic.pillon@st.com>
 # Created              : 26/04/2018
-# Last Modified        : 05/06/2018
-# Python Version       : 2.7
+# Python Version       : 2.7 / 3.x
 
 # Description         : Used to build sketch(es) thanks to Arduino Builder for all core variants. 
 
@@ -156,29 +155,17 @@ def create_output_file():
 
 def manage_exclude_list(file):
     global exclude_list
-    temp_list=[]
-    i=0
-    count=0
     with open(file, "r") as f:
         for line in f.readlines():
             ino = line.rstrip()
             exclude_list.append(ino)
-        print("List of excluded sketches : ",exclude_list)
-    temp_list = find_inos()
-    print("LENGTH AVANT EXCLUSION =", len(temp_list))
     if exclude_list:
-        while i<len(exclude_list):
-            y=0
-            regex = ".*(" + exclude_list[i]+ ").*"
-            while y<len(temp_list):
-                x = re.match(regex, temp_list[y], re.IGNORECASE)
+        for pattern in exclude_list:
+            regex = ".*(" + pattern + ").*"
+            for s in sketch_list:
+                x = re.match(regex, s, re.IGNORECASE)
                 if x:
-                    count+=1
-                    temp_list.remove(x.group(0))
-                y+=1
-            i+=1 
-        print("NB EXCLUSION =", count)
-    return temp_list
+                    sketch_list.remove(x.group(0))
 
 # Manage sketches list
 def manage_inos():
@@ -186,13 +173,12 @@ def manage_inos():
     global exclude_list
     # Find all inos or all patterned inos
     if args.all or args.sketches:
+        sketch_list = find_inos()
         if args.exclude:
             assert os.path.exists(args.exclude), "Exclude list file does not exist"
-            sketch_list = manage_exclude_list(args.exclude)
+            manage_exclude_list(args.exclude)
         elif os.path.exists(exclude_file_default):
-            sketch_list = manage_exclude_list(exclude_file_default)
-        else:
-            sketch_list = find_inos()
+            manage_exclude_list(exclude_file_default)
     # Only one ino
     elif args.ino:
         if os.path.exists(args.ino):
