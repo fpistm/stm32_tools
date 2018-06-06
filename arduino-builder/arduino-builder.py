@@ -156,6 +156,7 @@ def create_output_file():
 
 def manage_exclude_list(file):
     global exclude_list
+    global sketch_list
     with open(file, "r") as f:
         for line in f.readlines():
             ino = line.rstrip()
@@ -163,7 +164,7 @@ def manage_exclude_list(file):
     if exclude_list:
         for pattern in exclude_list:
             regex = ".*(" + pattern + ").*"
-            for s in sketch_list:
+            for s in reversed(sketch_list):
                 x = re.match(regex, s, re.IGNORECASE)
                 if x:
                     sketch_list.remove(x.group(0))
@@ -211,7 +212,7 @@ def manage_inos():
 # Find all .ino files
 def find_inos():
     inoList = []
-    for root, dirs, files in os.walk(arduino_path):
+    for root, dirs, files in os.walk(arduino_path, followlinks=True):
         for file in files:
             if file.endswith(".ino"):
                 if args.sketches:
@@ -388,22 +389,22 @@ def build_all():
             )
     with open(file, "a") as f:
         f.write("\n****************** PROCESSING COMPLETED ******************\n")
-        f.write("TOTAL PASSED : {} % \n".format(nb_build_passed / nb_build_total * 100))
-        f.write("TOTAL FAILED : {} % \n".format(nb_build_failed / nb_build_total * 100))
+        f.write("TOTAL PASSED : {} % \n".format(nb_build_passed *100.0 / nb_build_total))
+        f.write("TOTAL FAILED : {} % \n".format(nb_build_failed *100.0 / nb_build_total))
         f.write("Logs are available here: " + output_dir)
     print("\n****************** PROCESSING COMPLETED ******************")
     print(
         "PASSED = {}/{} ({}%) ".format(
             nb_build_passed,
             nb_build_total,
-            round(nb_build_passed / nb_build_total * 100),
+            round(nb_build_passed * 100.0  / nb_build_total ),
         )
     )
     print(
         "FAILED = {}/{} ({}%) ".format(
             nb_build_failed,
             nb_build_total,
-            round(nb_build_failed / nb_build_total * 100),
+            round(nb_build_failed * 100.0 / nb_build_total ),
         )
     )
     print("Logs are available here: " + output_dir)
