@@ -141,9 +141,10 @@ def deleteFolder(folder):
     if os.path.isdir(folder):
         shutil.rmtree(folder, ignore_errors=True)
 
+
 def cat(file):
-    with open(file,'r') as f:
-        print (f.read())
+    with open(file, "r") as f:
+        print(f.read())
 
 
 # Create the output file
@@ -263,11 +264,13 @@ def check_status(status, board_name, sketch_name):
     global nb_build_passed
     global nb_build_failed
     global nb_build_total
-    stderr_file = os.path.join(output_dir, board_name, std_dir,sketch_name + "_stderr.txt")
+    stderr_file = os.path.join(
+        output_dir, board_name, std_dir, sketch_name + "_stderr.txt"
+    )
     nb_build_total += 1
     if status == 0:
         print("SUCESS")
-        if(args.binaries) :
+        if args.binaries:
             bin_copy(board_name, sketch_name)
         nb_build_passed += 1
     elif status == 1:
@@ -398,22 +401,26 @@ def build_all():
             )
     with open(file, "a") as f:
         f.write("\n****************** PROCESSING COMPLETED ******************\n")
-        f.write("TOTAL PASSED : {} % \n".format(nb_build_passed *100.0 / nb_build_total))
-        f.write("TOTAL FAILED : {} % \n".format(nb_build_failed *100.0 / nb_build_total))
+        f.write(
+            "TOTAL PASSED : {} % \n".format(nb_build_passed * 100.0 / nb_build_total)
+        )
+        f.write(
+            "TOTAL FAILED : {} % \n".format(nb_build_failed * 100.0 / nb_build_total)
+        )
         f.write("Logs are available here: " + output_dir)
     print("\n****************** PROCESSING COMPLETED ******************")
     print(
         "PASSED = {}/{} ({}%) ".format(
             nb_build_passed,
             nb_build_total,
-            round(nb_build_passed * 100.0  / nb_build_total ),
+            round(nb_build_passed * 100.0 / nb_build_total),
         )
     )
     print(
         "FAILED = {}/{} ({}%) ".format(
             nb_build_failed,
             nb_build_total,
-            round(nb_build_failed * 100.0 / nb_build_total ),
+            round(nb_build_failed * 100.0 / nb_build_total),
         )
     )
     print("Logs are available here: " + output_dir)
@@ -433,6 +440,7 @@ def build(cmd, board_name, sketch_name):
         res = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
         res.wait()
         return res.returncode
+
 
 # Parser
 parser = argparse.ArgumentParser(description="Automatic build script")
@@ -455,9 +463,7 @@ parser.add_argument(
 )
 g = parser.add_mutually_exclusive_group()
 g.add_argument(
-    "--binaries",
-    help="-bin: copy binaries for each ino",
-    action="store_true",
+    "--binaries", help="-bin: copy binaries for each ino", action="store_true"
 )
 g.add_argument(
     "--travis",
