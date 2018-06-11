@@ -141,6 +141,10 @@ def deleteFolder(folder):
     if os.path.isdir(folder):
         shutil.rmtree(folder, ignore_errors=True)
 
+def cat(file):
+    with open(file,'r') as f:
+        print (f.read())
+
 
 # Create the output file
 def create_output_file():
@@ -259,6 +263,7 @@ def check_status(status, board_name, sketch_name):
     global nb_build_passed
     global nb_build_failed
     global nb_build_total
+    stderr_file = os.path.join(output_dir, board_name, std_dir,sketch_name + "_stderr.txt")
     nb_build_total += 1
     if status == 0:
         print("SUCESS")
@@ -267,6 +272,8 @@ def check_status(status, board_name, sketch_name):
         nb_build_passed += 1
     elif status == 1:
         print("FAILED")
+        if args.travis:
+            cat(stderr_file)
         nb_build_failed += 1
     else:
         print("Error ! Check the run_command exit status ! Return code = " + status)
@@ -427,7 +434,6 @@ def build(cmd, board_name, sketch_name):
         res.wait()
         return res.returncode
 
-
 # Parser
 parser = argparse.ArgumentParser(description="Automatic build script")
 parser.add_argument(
@@ -447,9 +453,15 @@ parser.add_argument(
     help="-c: clean output directory by deleting %s folder" % root_output_dir,
     action="store_true",
 )
-parser.add_argument(
+g = parser.add_mutually_exclusive_group()
+g.add_argument(
     "--binaries",
     help="-bin: copy binaries for each ino",
+    action="store_true",
+)
+g.add_argument(
+    "--travis",
+    help="Custom configuration for CI Build with TRAVIS CI",
     action="store_true",
 )
 group = parser.add_mutually_exclusive_group()
@@ -494,3 +506,7 @@ build_all()
 
 # Remove build output
 deleteFolder(build_output_dir)
+
+if args.travis:
+    if nb_build_failed:
+        sys.exit()
