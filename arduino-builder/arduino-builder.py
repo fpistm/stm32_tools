@@ -262,7 +262,8 @@ def check_status(status, board_name, sketch_name):
     nb_build_total += 1
     if status == 0:
         print("SUCESS")
-        bin_copy(board_name, sketch_name)
+        if(args.binaries) :
+            bin_copy(board_name, sketch_name)
         nb_build_passed += 1
     elif status == 1:
         print("FAILED")
@@ -444,6 +445,11 @@ parser.add_argument(
     "-c",
     "--clean",
     help="-c: clean output directory by deleting %s folder" % root_output_dir,
+    action="store_true",
+)
+parser.add_argument(
+    "--binaries",
+    help="-bin: copy binaries for each ino",
     action="store_true",
 )
 group = parser.add_mutually_exclusive_group()
