@@ -250,6 +250,7 @@ def find_board():
                                         board_name = x.group(2)
                                         board = (board_type, board_name)
                                         board_list.append(board)
+    assert len(board_list), "No board found!"
     return sorted(board_list)
 
 
