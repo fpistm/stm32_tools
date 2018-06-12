@@ -515,4 +515,4 @@ deleteFolder(build_output_dir)
 
 if args.travis:
     if nb_build_failed:
-        sys.exit()
+        sys.exit(1)
