@@ -6,8 +6,8 @@
 # Created              : 26/04/2018
 # Python Version       : 2.7 / 3.x
 
-# Description         : Used to build sketch(es) thanks to Arduino Builder for all core variants.
-
+# Description         : Used to build sketch(es) thanks to Arduino Builder
+#                       See https://github.com/arduino/arduino-builder
 import os
 import re
 import sys
@@ -24,11 +24,15 @@ config_filename = "config.json"
 home = os.path.expanduser("~")
 tempdir = tempfile.gettempdir()
 build_id = time.strftime("_%Y-%m-%d_%H-%M-%S")
+script_path = os.path.dirname(os.path.abspath(__file__))
 
 try:
     config_file = open(config_filename, "r")
 except IOError:
-    print("Please set your configuration in '%s' file" % config_filename)
+    print(
+        "Please set your configuration in '%s' file"
+        % os.path.join(script_path, config_filename)
+    )
     config_file = open(config_filename, "w")
     if sys.platform.startswith("win32"):
         print("Platform is Windows")
@@ -270,7 +274,7 @@ def check_status(status, board_name, sketch_name):
     nb_build_total += 1
     if status == 0:
         print("SUCESS")
-        if args.binaries:
+        if args.bin:
             bin_copy(board_name, sketch_name)
         nb_build_passed += 1
     elif status == 1:
@@ -443,55 +447,66 @@ def build(cmd, board_name, sketch_name):
 
 
 # Parser
-parser = argparse.ArgumentParser(description="Automatic build script")
-parser.add_argument(
+parser = argparse.ArgumentParser(
+    description="Manage arduino-builder command line tool for compiling\
+    Arduino sketch(es)."
+)
+
+g0 = parser.add_mutually_exclusive_group()
+g0.add_argument("-l", "--list", help="list of available board(s)", action="store_true")
+g0.add_argument(
     "-a",
     "--all",
-    help="-a : automatic build - build all sketches for all board",
+    help="build all sketches found for all available boards",
     action="store_true",
 )
 parser.add_argument(
     "-b",
     "--board",
-    help="-b <board pattern>: pattern to find one or more boards to build",
+    metavar="pattern",
+    help="pattern to find one or more board(s) to build",
 )
 parser.add_argument(
     "-c",
     "--clean",
-    help="-c: clean output directory by deleting %s folder" % root_output_dir,
+    help="clean output directory by deleting %s folder" % root_output_dir,
     action="store_true",
 )
-g = parser.add_mutually_exclusive_group()
-g.add_argument(
-    "--binaries", help="-bin: copy binaries for each ino", action="store_true"
+parser.add_argument(
+    "-v", "--verbose", help="enable arduino-builder verbose mode", action="store_true"
 )
-g.add_argument(
-    "--travis",
-    help="Custom configuration for CI Build with TRAVIS CI",
-    action="store_true",
+
+g1 = parser.add_mutually_exclusive_group()
+g1.add_argument("--bin", help="save binaries", action="store_true")
+g1.add_argument(
+    "--travis", help="Custom configuration for Travis CI build", action="store_true"
 )
-group = parser.add_mutually_exclusive_group()
-group.add_argument("-i", "--ino", help="-i <ino filepath>: single ino file to build")
-group.add_argument(
-    "-f",
-    "--file",
-    help=" -f <sketches list file>: file containing list of sketches to build",
+
+# Sketch options
+sketchg0 = parser.add_argument_group(
+    title="Sketch(es) options", description="By default build %s" % sketch_default
 )
-group.add_argument(
+
+sketchg1 = sketchg0.add_mutually_exclusive_group()
+sketchg1.add_argument(
+    "-i", "--ino", metavar="filepath", help="single ino file to build"
+)
+sketchg1.add_argument(
+    "-f", "--file", metavar="filepath", help="file containing list of sketches to build"
+)
+sketchg1.add_argument(
     "-s",
     "--sketches",
-    help=" -s <sketch pattern>: pattern to find one or more sketch to build",
+    metavar="pattern",
+    help="pattern to find one or more sketch to build",
 )
-parser.add_argument(
+sketchg1.add_argument(
     "-e",
     "--exclude",
-    help="-e <exclude list file>: file containing pattern of sketches to ignore | Default path : <working directory>\conf\exclude_list.txt ",
-)
-parser.add_argument(
-    "-v",
-    "--verbose",
-    help="-v : enable arduino-builder verbose mode",
-    action="store_true",
+    metavar="filepath",
+    help="file containing pattern of sketches to ignore.\
+    Default path : %s"
+    % os.path.join(script_path, exclude_file_default),
 )
 
 args = parser.parse_args()
@@ -499,6 +514,14 @@ args = parser.parse_args()
 # Clean previous build results
 if args.clean:
     deleteFolder(root_output_dir)
+
+# List boards available
+if args.list:
+    find_board()
+    print("%i board(s) available" % len(board_list))
+    for b in board_list:
+        print(b[1])
+    quit()
 
 # Create output folders
 createFolder(build_output_dir)
