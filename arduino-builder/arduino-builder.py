@@ -72,7 +72,8 @@ except IOError:
                 "BUILD_OUPUT_DIR": build_output_dir,
                 "ROOT_OUPUT_DIR": root_output_dir,
                 "SKETCHBOOK_PATH": sketchbook_path,
-            }
+            },
+            indent=2,
         )
     )
     config_file.close()
