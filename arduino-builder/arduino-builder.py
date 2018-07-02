@@ -35,7 +35,7 @@ except IOError:
     )
     config_file = open(config_filename, "w")
     if sys.platform.startswith("win32"):
-        print("Platform is Windows")
+        print("Default config set for Windows environment.")
         arduino_path = "C:\\Program Files (x86)\\Arduino"  # arduino default path
         arduino_packages = home + "\\AppData\\Local\\Arduino15\\packages"  # Windows 7
         build_output_dir = (
@@ -44,21 +44,21 @@ except IOError:
         root_output_dir = home + "\\arduinoBuilderOutput"  # output directory
         sketchbook_path = home + "\\My Documents\\Arduino"
     elif sys.platform.startswith("linux"):
-        print("Platform is Linux")
+        print("Default config set for Linux environment.")
         arduino_path = home + "/Documents/arduino-1.8.5"
         arduino_packages = home + "/.arduino15/packages"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
         root_output_dir = home + "/Documents/arduinoBuilderOutput"
         sketchbook_path = home + "/Documents/Arduino"
     elif sys.platform.startswith("darwin"):
-        print("Platform is Mac OSX")
+        print("Default config set for Mac OSX environment.")
         arduino_path = home + "/Applications/Arduino/"
         arduino_packages = home + "/Library/Arduino15/packages"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
         root_output_dir = home + "/Documents/arduinoBuilderOutput"
         sketchbook_path = home + "/Documents/Arduino"
     else:
-        print("Platform unknown")
+        print("Platform unknown.")
         arduino_path = "<Set Arduino install path>"
         arduino_packages = "<Set Arduino packages install path>"
         build_output_dir = "<Set arduino builder temporary folder install path>"
