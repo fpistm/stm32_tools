@@ -109,7 +109,7 @@ lib_path_default = os.path.join(arduino_path, "libraries")
 additional_lib_path = os.path.join(sketchbook_path, "libraries")
 tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
-
+log_file = os.path.join(output_dir, "build_result.log")
 
 # Ouput directory path
 bin_dir = "binaries"
@@ -153,15 +153,13 @@ def cat(file):
 
 
 # Create the output file
-def create_output_file():
-    filename = os.path.join(output_dir, "Result_file.txt")
-    with open(filename, "w") as file:
+def create_output_log_file():
+    with open(log_file, "w") as file:
         file.write("************************************** \n")
         file.write("*********** OUTPUT / RESULT ********** \n")
         file.write("************************************** \n")
         file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
         file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
-    return filename
 
 
 def manage_exclude_list(file):
@@ -265,7 +263,7 @@ def find_board():
 
 
 # Check the status
-def check_status(status, board_name, sketch_name):
+def check_status(status, board_name, sketch_name, boardOk, boardKo):
     global nb_build_passed
     global nb_build_failed
     global nb_build_total
@@ -275,16 +273,71 @@ def check_status(status, board_name, sketch_name):
     nb_build_total += 1
     if status == 0:
         print("SUCESS")
+        boardOk.append(board_name)
         if args.bin:
             bin_copy(board_name, sketch_name)
         nb_build_passed += 1
     elif status == 1:
         print("FAILED")
+        boardKo.append(board_name)
         if args.travis:
             cat(stderr_file)
         nb_build_failed += 1
     else:
         print("Error ! Check the run_command exit status ! Return code = " + status)
+
+
+# Log sketch build result
+def log_sketch_build_result(sketch, boardOk, boardKo):
+    with open(log_file, "a") as f:
+        f.write("\nSketch : " + sketch)
+        if len(boardOk):
+            f.write("\nBuild PASSED for these boards :\n")
+            for b in boardOk:
+                f.write(str(b) + "\n")
+        f.write(
+            "Total build PASSED for this sketch : {} / {}".format(
+                len(boardOk), len(board_list)
+            )
+        )
+        if len(boardKo):
+            f.write("\nBuild FAILED for these boards :\n")
+            for b in boardKo:
+                f.write(str(b) + "\n")
+        f.write(
+            "\nTotal build FAILED for this sketch : {} / {}\n".format(
+                len(boardKo), len(board_list)
+            )
+        )
+
+
+# Log final result
+def log_final_result():
+    with open(log_file, "a") as f:
+        f.write("\n****************** PROCESSING COMPLETED ******************\n")
+        f.write(
+            "TOTAL PASSED : {} % \n".format(nb_build_passed * 100.0 / nb_build_total)
+        )
+        f.write(
+            "TOTAL FAILED : {} % \n".format(nb_build_failed * 100.0 / nb_build_total)
+        )
+        f.write("Logs are available here: " + output_dir)
+    print("\n****************** PROCESSING COMPLETED ******************")
+    print(
+        "PASSED = {}/{} ({}%) ".format(
+            nb_build_passed,
+            nb_build_total,
+            round(nb_build_passed * 100.0 / nb_build_total),
+        )
+    )
+    print(
+        "FAILED = {}/{} ({}%) ".format(
+            nb_build_failed,
+            nb_build_total,
+            round(nb_build_failed * 100.0 / nb_build_total),
+        )
+    )
+    print("Logs are available here: " + output_dir)
 
 
 # Create a "bin" directory for each board and copy all binary files
@@ -353,86 +406,34 @@ def create_command(board, sketch_path):
 
 # Automatic run
 def build_all():
-    file = create_output_file()
-    current_sketch = 0
-    for files in sketch_list:
+    create_output_log_file()
+    sketch_nb = 0
+    for sketch in sketch_list:
         boardOk = []
         boardKo = []
-        current_board = 0
-        current_sketch += 1
-        sketch_name = os.path.basename(files)
+        bord_nb = 0
+        sketch_nb += 1
+        sketch_name = os.path.basename(sketch)
         print(
-            "\nRUNNING : {} ({}/{}) ".format(
-                sketch_name, current_sketch, len(sketch_list)
-            )
+            "\nRUNNING : {} ({}/{}) ".format(sketch_name, sketch_nb, len(sketch_list))
         )
-        print("Sketch path : " + files)
+        print("Sketch path : " + sketch)
         for board in board_list:
             board_name = board[1]
-            current_board += 1
+            bord_nb += 1
             sys.stdout.write(
-                "Build {} ({}/{})... ".format(
-                    board_name, current_board, len(board_list)
-                )
+                "Build {} ({}/{})... ".format(board_name, bord_nb, len(board_list))
             )
             sys.stdout.flush()
 
-            command = create_command(board, files)
-            status = build(command, board_name, sketch_name)
-            if status == 0:
-                boardOk.append(board_name)
-            if status == 1:
-                boardKo.append(board_name)
-            check_status(status, board_name, sketch_name)
-        with open(file, "a") as f:
-            f.write("\nSketch : " + files)
-            if len(boardOk):
-                f.write("\nBuild PASSED for these boards :\n")
-                for b in boardOk:
-                    f.write(str(b) + "\n")
-            f.write(
-                "Total build PASSED for this sketch : {} / {}".format(
-                    len(boardOk), len(board_list)
-                )
-            )
-            if len(boardKo):
-                f.write("\nBuild FAILED for these boards :\n")
-                for b in boardKo:
-                    f.write(str(b) + "\n")
-            f.write(
-                "\nTotal build FAILED for this sketch : {} / {}\n".format(
-                    len(boardKo), len(board_list)
-                )
-            )
-    with open(file, "a") as f:
-        f.write("\n****************** PROCESSING COMPLETED ******************\n")
-        f.write(
-            "TOTAL PASSED : {} % \n".format(nb_build_passed * 100.0 / nb_build_total)
-        )
-        f.write(
-            "TOTAL FAILED : {} % \n".format(nb_build_failed * 100.0 / nb_build_total)
-        )
-        f.write("Logs are available here: " + output_dir)
-    print("\n****************** PROCESSING COMPLETED ******************")
-    print(
-        "PASSED = {}/{} ({}%) ".format(
-            nb_build_passed,
-            nb_build_total,
-            round(nb_build_passed * 100.0 / nb_build_total),
-        )
-    )
-    print(
-        "FAILED = {}/{} ({}%) ".format(
-            nb_build_failed,
-            nb_build_total,
-            round(nb_build_failed * 100.0 / nb_build_total),
-        )
-    )
-    print("Logs are available here: " + output_dir)
+            command = create_command(board, sketch)
+            build(command, board_name, sketch_name, boardOk, boardKo)
+        log_sketch_build_result(sketch, boardOk, boardKo)
+    log_final_result()
 
 
 # Run arduino builder command
-def build(cmd, board_name, sketch_name):
+def build(cmd, board_name, sketch_name, boardOk, boardKo):
     boardstd = os.path.join(
         output_dir, board_name, std_dir
     )  # Board specific folder that contain stdout and stderr files
@@ -444,7 +445,7 @@ def build(cmd, board_name, sketch_name):
     ) as stderr:
         res = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
         res.wait()
-        return res.returncode
+        check_status(res.returncode, board_name, sketch_name, boardOk, boardKo)
 
 
 # Parser
