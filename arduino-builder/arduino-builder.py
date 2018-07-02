@@ -166,8 +166,7 @@ def manage_exclude_list(file):
     global sketch_list
     with open(file, "r") as f:
         for line in f.readlines():
-            ino = line.rstrip()
-            exclude_list.append(ino)
+            exclude_list.append(line.rstrip())
     if exclude_list:
         for pattern in exclude_list:
             regex = ".*(" + pattern + ").*"
@@ -350,21 +349,10 @@ def bin_copy(board_name, sketch_name):
 
 # Set up specific options to customise arduino builder command
 def set_varOpt(board):
-    var_type_default = board[0]
-    var_num_default = board[1]
-    upload_method_default = "STLink"
-    serial_mode_default = "generic"
-    option_default = "osstd"
     variantOption = "STM32:stm32:{var_type}:pnum={var_num}".format(
-        var_type=var_type_default, var_num=var_num_default
+        var_type=board[0], var_num=board[1]
     )
-    variantOption += ",upload_method={upload_method}".format(
-        upload_method=upload_method_default
-    )
-    variantOption += ",xserial={serial_mode},opt={option}".format(
-        serial_mode=serial_mode_default, option=option_default
-    )
-
+    variantOption += ",upload_method=STLink,xserial=generic,opt=osstd"
     return variantOption
 
 
