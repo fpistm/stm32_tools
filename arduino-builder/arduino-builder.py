@@ -13,7 +13,6 @@ import re
 import sys
 import json
 import time
-import fnmatch
 import shutil
 import subprocess
 import tempfile
@@ -123,7 +122,7 @@ exclude_file_default = os.path.join("conf", "exclude_list.txt")
 
 # List
 sketch_list = []
-board_list = []
+board_list = []  # (board type, board name)
 exclude_list = []
 
 # Counter
@@ -233,31 +232,24 @@ def find_inos():
     return sorted(inoList)
 
 
-# Return a list of all board types and names using the board.txt file
+# Return a list of all board types and names using the board.txt file for
+# stm32 architecture
 def find_board():
     for path in [arduino_packages, hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
-            for file in files:
-                if fnmatch.fnmatch(file, "boards.txt"):
-                    if os.path.getsize(os.path.join(root, file)) != 0:
-                        with open(os.path.join(root, file), "r") as f:
-                            regex = "(.+)\.menu\.pnum\.([^\.]+)="
-                            for line in f.readlines():
-                                x = re.match(regex, line)
-                                if x:
-                                    if args.board:
-                                        reg = ".*(" + args.board + ").*"
-                                        y = re.match(reg, x.group(0), re.IGNORECASE)
-                                        if y:
-                                            board_type = x.group(1)
-                                            board_name = x.group(2)
-                                            board = (board_type, board_name)
-                                            board_list.append(board)
-                                    else:
-                                        board_type = x.group(1)
-                                        board_name = x.group(2)
-                                        board = (board_type, board_name)
-                                        board_list.append(board)
+            if "boards.txt" in files and "stm32" in root:
+                with open(os.path.join(root, "boards.txt"), "r") as f:
+                    regex = "(.+)\.menu\.pnum\.([^\.]+)="
+                    for line in f.readlines():
+                        x = re.match(regex, line)
+                        if x:
+                            if args.board:
+                                reg = ".*(" + args.board + ").*"
+                                if re.match(reg, x.group(0), re.IGNORECASE) is None:
+                                    continue
+                            # board type, board name
+                            board_list.append((x.group(1), x.group(2)))
+                break
     assert len(board_list), "No board found!"
     return sorted(board_list)
 
