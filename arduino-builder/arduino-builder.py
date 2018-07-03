@@ -37,40 +37,39 @@ except IOError:
         print("Default config set for Windows environment.")
         arduino_path = "C:\\Program Files (x86)\\Arduino"  # arduino default path
         arduino_packages = home + "\\AppData\\Local\\Arduino15\\packages"  # Windows 7
-        build_output_dir = (
-            tempdir + "\\temp_arduinoBuilderOutput"
-        )  # Windows 7 temporary directory using by arduino builder
+        arduino_user_sketchbook = home + "\\My Documents\\Arduino"
+        # Windows 7 temporary directory using by arduino builder
+        build_output_dir = tempdir + "\\temp_arduinoBuilderOutput"
         root_output_dir = home + "\\arduinoBuilderOutput"  # output directory
-        sketchbook_path = home + "\\My Documents\\Arduino"
     elif sys.platform.startswith("linux"):
         print("Default config set for Linux environment.")
         arduino_path = home + "/Documents/arduino-1.8.5"
         arduino_packages = home + "/.arduino15/packages"
+        arduino_user_sketchbook = home + "/Documents/Arduino"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
         root_output_dir = home + "/Documents/arduinoBuilderOutput"
-        sketchbook_path = home + "/Documents/Arduino"
     elif sys.platform.startswith("darwin"):
         print("Default config set for Mac OSX environment.")
         arduino_path = home + "/Applications/Arduino/"
         arduino_packages = home + "/Library/Arduino15/packages"
+        arduino_user_sketchbook = home + "/Documents/Arduino"
         build_output_dir = tempdir + "/temp_arduinoBuilderOutput"
         root_output_dir = home + "/Documents/arduinoBuilderOutput"
-        sketchbook_path = home + "/Documents/Arduino"
     else:
         print("Platform unknown.")
         arduino_path = "<Set Arduino install path>"
         arduino_packages = "<Set Arduino packages install path>"
+        arduino_user_sketchbook = "<Set the user sketchbook location>"
         build_output_dir = "<Set arduino builder temporary folder install path>"
         root_output_dir = "<Set your output directory path>"
-        sketchbook_path = "<Set the sketchbook location>"
     config_file.write(
         json.dumps(
             {
                 "ARDUINO_PATH": arduino_path,
                 "ARDUINO_PACKAGES": arduino_packages,
+                "ARDUINO_USER_SKETCHBOOK": arduino_user_sketchbook,
                 "BUILD_OUPUT_DIR": build_output_dir,
                 "ROOT_OUPUT_DIR": root_output_dir,
-                "SKETCHBOOK_PATH": sketchbook_path,
             },
             indent=2,
         )
@@ -84,9 +83,9 @@ config_file.close()
 # Common path
 arduino_path = config["ARDUINO_PATH"]
 arduino_packages = config["ARDUINO_PACKAGES"]
+arduino_user_sketchbook = config["ARDUINO_USER_SKETCHBOOK"]
 build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
 root_output_dir = config["ROOT_OUPUT_DIR"]
-sketchbook_path = config["SKETCHBOOK_PATH"]
 
 assert os.path.exists(arduino_path), (
     "Path does not exist: %s . Please set this path in the json config file"
@@ -97,15 +96,16 @@ assert os.path.exists(arduino_packages), (
     % arduino_packages
 )
 
-assert os.path.exists(sketchbook_path), (
+assert os.path.exists(arduino_user_sketchbook), (
     "Path does not exist: %s . Please set this path in the json config file"
-    % sketchbook_path
+    % arduino_user_sketchbook
 )
 
 arduino_builder = os.path.join(arduino_path, "arduino-builder")
-hardware_path = os.path.join(arduino_path, "hardware")
-lib_path_default = os.path.join(arduino_path, "libraries")
-additional_lib_path = os.path.join(sketchbook_path, "libraries")
+arduino_hardware_path = os.path.join(arduino_path, "hardware")
+arduino_lib_path = os.path.join(arduino_path, "libraries")
+arduino_sketchbook_path = os.path.join(arduino_path, "examples")
+arduino_user_lib_path = os.path.join(arduino_user_sketchbook, "libraries")
 tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
 log_file = os.path.join(output_dir, "build_result.log")
@@ -116,7 +116,7 @@ std_dir = "std_folder"
 
 # Default
 sketch_default = os.path.join(
-    arduino_path, "examples", "01.Basics", "Blink", "Blink.ino"
+    arduino_sketchbook_path, "01.Basics", "Blink", "Blink.ino"
 )
 exclude_file_default = os.path.join("conf", "exclude_list.txt")
 
@@ -234,7 +234,7 @@ def find_inos():
 # Return a list of all board types and names using the board.txt file for
 # stm32 architecture
 def find_board():
-    for path in [arduino_packages, hardware_path]:
+    for path in [arduino_packages, arduino_hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
             if "boards.txt" in files and "stm32" in root:
                 with open(os.path.join(root, "boards.txt"), "r") as f:
@@ -361,7 +361,7 @@ def create_command(board, sketch_path):
     cmd = []
     cmd.append(arduino_builder)
     cmd.append("-hardware")
-    cmd.append(hardware_path)
+    cmd.append(arduino_hardware_path)
     cmd.append("-hardware")
     cmd.append(arduino_packages)
     cmd.append("-tools")
@@ -369,9 +369,9 @@ def create_command(board, sketch_path):
     cmd.append("-tools")
     cmd.append(arduino_packages)
     cmd.append("-libraries")
-    cmd.append(lib_path_default)
+    cmd.append(arduino_lib_path)
     cmd.append("-libraries")
-    cmd.append(additional_lib_path)
+    cmd.append(arduino_user_lib_path)
     cmd.append("-fqbn")
     cmd.append(set_varOpt(board))
     cmd.append("-ide-version=10805")
