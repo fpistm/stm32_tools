@@ -29,8 +29,9 @@ try:
     config_file = open(config_filename, "r")
 except IOError:
     print(
-        "Please set your configuration in '%s' file"
-        % os.path.join(script_path, config_filename)
+        "Please set your configuration in '{}' file".format(
+            os.path.join(script_path, config_filename)
+        )
     )
     config_file = open(config_filename, "w")
     if sys.platform.startswith("win32"):
@@ -87,18 +88,21 @@ arduino_user_sketchbook = config["ARDUINO_USER_SKETCHBOOK"]
 build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
 root_output_dir = config["ROOT_OUPUT_DIR"]
 
-assert os.path.exists(arduino_path), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % arduino_path
+assert os.path.exists(
+    arduino_path
+), "Path does not exist: {} . Please set this path in the json config file".format(
+    arduino_path
 )
-assert os.path.exists(arduino_packages), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % arduino_packages
+assert os.path.exists(
+    arduino_packages
+), "Path does not exist: {} . Please set this path in the json config file".format(
+    arduino_packages
 )
 
-assert os.path.exists(arduino_user_sketchbook), (
-    "Path does not exist: %s . Please set this path in the json config file"
-    % arduino_user_sketchbook
+assert os.path.exists(
+    arduino_user_sketchbook
+), "Path does not exist: {} . Please set this path in the json config file".format(
+    arduino_user_sketchbook
 )
 
 arduino_builder = os.path.join(arduino_path, "arduino-builder")
@@ -158,7 +162,7 @@ def create_output_log_file():
         file.write("*********** OUTPUT / RESULT ********** \n")
         file.write("************************************** \n")
         file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
-        file.write("\nFull path = {} \n".format(os.path.abspath(output_dir)))
+        file.write("\nPath : {} \n".format(os.path.abspath(output_dir)))
 
 
 def manage_exclude_list(file):
@@ -208,7 +212,7 @@ def manage_inos():
                 elif os.path.exists(os.path.join(arduino_path, ino)):
                     sketch_list.append(os.path.join(arduino_path, ino))
                 else:
-                    print("Ignore %s as does not exist." % ino)
+                    print("Ignore {} as does not exist.".format(ino))
     # Default ino to build
     else:
         sketch_list = [sketch_default]
@@ -304,30 +308,20 @@ def log_sketch_build_result(sketch, boardOk, boardKo):
 
 # Log final result
 def log_final_result():
+    passed = "TOTAL PASSED = {}/{} ({}%) ".format(
+        nb_build_passed, nb_build_total, round(nb_build_passed * 100.0 / nb_build_total)
+    )
+    failed = "TOTAL FAILED = {}/{} ({}%) ".format(
+        nb_build_failed, nb_build_total, round(nb_build_failed * 100.0 / nb_build_total)
+    )
     with open(log_file, "a") as f:
         f.write("\n****************** PROCESSING COMPLETED ******************\n")
-        f.write(
-            "TOTAL PASSED : {} % \n".format(nb_build_passed * 100.0 / nb_build_total)
-        )
-        f.write(
-            "TOTAL FAILED : {} % \n".format(nb_build_failed * 100.0 / nb_build_total)
-        )
+        f.write("{}\n".format(passed))
+        f.write("{}\n".format(failed))
         f.write("Logs are available here: " + output_dir)
     print("\n****************** PROCESSING COMPLETED ******************")
-    print(
-        "PASSED = {}/{} ({}%) ".format(
-            nb_build_passed,
-            nb_build_total,
-            round(nb_build_passed * 100.0 / nb_build_total),
-        )
-    )
-    print(
-        "FAILED = {}/{} ({}%) ".format(
-            nb_build_failed,
-            nb_build_total,
-            round(nb_build_failed * 100.0 / nb_build_total),
-        )
-    )
+    print(passed)
+    print(failed)
     print("Logs are available here: " + output_dir)
 
 
@@ -349,11 +343,13 @@ def bin_copy(board_name, sketch_name):
 
 # Set up specific options to customise arduino builder command
 def set_varOpt(board):
-    variantOption = "STM32:stm32:{var_type}:pnum={var_num}".format(
-        var_type=board[0], var_num=board[1]
+    return (
+        "STM32:stm32:"
+        + board[0]
+        + ":pnum="
+        + board[1]
+        + ",upload_method=STLink,xserial=generic,opt=osstd"
     )
-    variantOption += ",upload_method=STLink,xserial=generic,opt=osstd"
-    return variantOption
 
 
 # Create arduino builder command
@@ -451,7 +447,7 @@ parser.add_argument(
 parser.add_argument(
     "-c",
     "--clean",
-    help="clean output directory by deleting %s folder" % root_output_dir,
+    help="clean output directory " + root_output_dir,
     action="store_true",
 )
 parser.add_argument(
@@ -466,7 +462,7 @@ g1.add_argument(
 
 # Sketch options
 sketchg0 = parser.add_argument_group(
-    title="Sketch(es) options", description="By default build %s" % sketch_default
+    title="Sketch(es) options", description="By default build " + sketch_default
 )
 
 sketchg1 = sketchg0.add_mutually_exclusive_group()
@@ -487,8 +483,8 @@ sketchg1.add_argument(
     "--exclude",
     metavar="filepath",
     help="file containing pattern of sketches to ignore.\
-    Default path : %s"
-    % os.path.join(script_path, exclude_file_default),
+    Default path : "
+    + os.path.join(script_path, exclude_file_default),
 )
 
 args = parser.parse_args()
