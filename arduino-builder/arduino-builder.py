@@ -162,14 +162,20 @@ def cat(file):
         print(f.read())
 
 
-# Create the output file
-def create_output_log_file():
+# Create the log output file and folders
+def create_output_log_tree():
+    # Log output file
     with open(log_file, "w") as file:
         file.write("************************************** \n")
         file.write("*********** OUTPUT / RESULT ********** \n")
         file.write("************************************** \n")
         file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
         file.write("\nPath : {} \n".format(os.path.abspath(output_dir)))
+    # Folders
+    for board in board_list:
+        createFolder(os.path.join(output_dir, board[1], std_dir))
+        if args.bin:
+            createFolder(os.path.join(output_dir, board[1], bin_dir))
 
 
 def manage_exclude_list(file):
@@ -332,7 +338,6 @@ def log_final_result():
 # from the builder output directory into it
 def bin_copy(board_name, sketch_name):
     board_bin = os.path.join(output_dir, board_name, bin_dir)
-    createFolder(board_bin)
     binfile = os.path.join(build_output_dir, sketch_name + ".bin")
     try:
         shutil.copy(binfile, os.path.abspath(board_bin))
@@ -384,7 +389,7 @@ def genBasicCommand():
 
 # Automatic run
 def build_all():
-    create_output_log_file()
+    create_output_log_tree()
     sketch_nb = 0
     for sketch in sketch_list:
         boardOk = []
@@ -413,7 +418,6 @@ def build_all():
 def build(board_name, sketch_name, boardOk, boardKo):
     boardstd = os.path.join(output_dir, board_name, std_dir)
     # Board specific folder that contain stdout and stderr files
-    createFolder(boardstd)
     stddout_name = sketch_name + "_stdout.txt"
     stdderr_name = sketch_name + "_stderr.txt"
     with open(os.path.join(boardstd, stddout_name), "w") as stdout, open(
