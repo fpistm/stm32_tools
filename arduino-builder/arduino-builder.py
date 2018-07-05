@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import tempfile
 import argparse
+from datetime import timedelta
 
 # Create a Json file for a better path management
 config_filename = "config.json"
@@ -136,6 +137,9 @@ exclude_list = []
 nb_build_total = 0
 nb_build_passed = 0
 nb_build_failed = 0
+
+# Timing
+startTime = time.time()
 
 
 # Create a folder if not exists
@@ -309,15 +313,19 @@ def log_final_result():
     failed = "TOTAL FAILED = {}/{} ({}%) ".format(
         nb_build_failed, nb_build_total, round(nb_build_failed * 100.0 / nb_build_total)
     )
+    duration = str(timedelta(seconds=time.time() - startTime))
     with open(log_file, "a") as f:
         f.write("\n****************** PROCESSING COMPLETED ******************\n")
+        f.write(time.strftime("%A %d %B %Y %H:%M:%S\n"))
         f.write("{}\n".format(passed))
         f.write("{}\n".format(failed))
         f.write("Logs are available here: " + output_dir)
+        f.write("Build duration: " + duration)
     print("\n****************** PROCESSING COMPLETED ******************")
     print(passed)
     print(failed)
     print("Logs are available here: " + output_dir)
+    print("Build duration: " + duration)
 
 
 # Create a "bin" directory for each board and copy all binary files
