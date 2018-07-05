@@ -133,7 +133,6 @@ board_list = []  # (board type, board name)
 exclude_list = []
 
 # Counter
-nb_build_total = 0
 nb_build_passed = 0
 nb_build_failed = 0
 
@@ -270,14 +269,11 @@ def find_board():
 
 
 # Check the status
-def check_status(status, board_name, sketch_name, boardOk, boardKo):
+def check_status(status, board_name, sketch_name, boardKo):
     global nb_build_passed
     global nb_build_failed
-    global nb_build_total
-    nb_build_total += 1
     if status == 0:
         print("SUCESS")
-        boardOk.append(board_name)
         if args.bin:
             bin_copy(board_name, sketch_name)
         nb_build_passed += 1
@@ -292,7 +288,7 @@ def check_status(status, board_name, sketch_name, boardOk, boardKo):
 
 
 # Log sketch build result
-def log_sketch_build_result(sketch, boardOk, boardKo):
+def log_sketch_build_result(sketch, boardKo):
     with open(log_file, "a") as f:
         f.write(
             """
@@ -300,7 +296,7 @@ Sketch: {0}
 Build PASSED: {1}/{2}
 Build FAILED: {3}/{2}
 """.format(
-                sketch, len(boardOk), len(board_list), len(boardKo)
+                sketch, len(board_list)-len(boardKo), len(board_list), len(boardKo)
             )
         )
         if len(boardKo):
@@ -309,6 +305,8 @@ Build FAILED: {3}/{2}
 
 # Log final result
 def log_final_result():
+    # Also equal to len(board_list) * len(sketch_list)
+    nb_build_total = nb_build_passed + nb_build_failed
     passed = "TOTAL PASSED = {}/{} ({}%) ".format(
         nb_build_passed, nb_build_total, round(nb_build_passed * 100.0 / nb_build_total)
     )
@@ -387,18 +385,13 @@ def genBasicCommand():
 # Automatic run
 def build_all():
     create_output_log_tree()
-    sketch_nb = 0
-    for sketch in sketch_list:
-        boardOk = []
+    for sketch_nb, sketch in enumerate(sketch_list, start=1):
         boardKo = []
-        bord_nb = 0
-        sketch_nb += 1
         sketch_name = os.path.basename(sketch)
         print("\nBuilding : {} ({}/{}) ".format(sketch, sketch_nb, len(sketch_list)))
         # Update command with sketch to build
         arduino_builder_command[-1] = sketch
-        for board in board_list:
-            bord_nb += 1
+        for bord_nb, board in enumerate(board_list, start=1):
             sys.stdout.write(
                 "Build {} ({}/{})... ".format(board[1], bord_nb, len(board_list))
             )
@@ -406,21 +399,21 @@ def build_all():
             # Update command with board to build
             arduino_builder_command[-2] = set_varOpt(board)
             # Execute the build
-            build(board[1], sketch_name, boardOk, boardKo)
-        log_sketch_build_result(sketch, boardOk, boardKo)
+            check_status(build(board[1]), board[1], sketch_name, boardKo)
+        log_sketch_build_result(sketch, boardKo)
     log_final_result()
 
 
 # Run arduino builder command
-def build(board_name, sketch_name, boardOk, boardKo):
+def build(board_name):
     with open(
-        os.path.join(output_dir, board_name, sketch_name + ".log"), "w"
+        os.path.join(output_dir, board_name, os.path.basename(arduino_builder_command[-1]) + ".log"), "w"
     ) as stdout:
         res = subprocess.Popen(
             arduino_builder_command, stdout=stdout, stderr=subprocess.STDOUT
         )
         res.wait()
-        check_status(res.returncode, board_name, sketch_name, boardOk, boardKo)
+        return res.returncode
 
 
 # Parser
