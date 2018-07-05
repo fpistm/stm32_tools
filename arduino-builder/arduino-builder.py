@@ -120,7 +120,6 @@ arduino_builder_command = []
 
 # Ouput directory path
 bin_dir = "binaries"
-std_dir = "std_folder"
 
 # Default
 sketch_default = os.path.join(
@@ -173,7 +172,7 @@ def create_output_log_tree():
         file.write("\nPath : {} \n".format(os.path.abspath(output_dir)))
     # Folders
     for board in board_list:
-        createFolder(os.path.join(output_dir, board[1], std_dir))
+        createFolder(os.path.join(output_dir, board[1]))
         if args.bin:
             createFolder(os.path.join(output_dir, board[1], bin_dir))
 
@@ -275,9 +274,6 @@ def check_status(status, board_name, sketch_name, boardOk, boardKo):
     global nb_build_passed
     global nb_build_failed
     global nb_build_total
-    stderr_file = os.path.join(
-        output_dir, board_name, std_dir, sketch_name + "_stderr.txt"
-    )
     nb_build_total += 1
     if status == 0:
         print("SUCESS")
@@ -289,7 +285,7 @@ def check_status(status, board_name, sketch_name, boardOk, boardKo):
         print("FAILED")
         boardKo.append(board_name)
         if args.travis:
-            cat(stderr_file)
+            cat(os.path.join(output_dir, board_name, sketch_name + ".log"))
         nb_build_failed += 1
     else:
         print("Error ! Check the run_command exit status ! Return code = " + status)
@@ -337,10 +333,11 @@ def log_final_result():
 # Create a "bin" directory for each board and copy all binary files
 # from the builder output directory into it
 def bin_copy(board_name, sketch_name):
-    board_bin = os.path.join(output_dir, board_name, bin_dir)
-    binfile = os.path.join(build_output_dir, sketch_name + ".bin")
     try:
-        shutil.copy(binfile, os.path.abspath(board_bin))
+        shutil.copy(
+            os.path.join(build_output_dir, sketch_name + ".bin"),
+            os.path.abspath(os.path.join(output_dir, board_name, bin_dir)),
+        )
     except OSError as e:
         print(
             "Impossible to copy the binary from the arduino builder output: "
@@ -416,14 +413,12 @@ def build_all():
 
 # Run arduino builder command
 def build(board_name, sketch_name, boardOk, boardKo):
-    boardstd = os.path.join(output_dir, board_name, std_dir)
-    # Board specific folder that contain stdout and stderr files
-    stddout_name = sketch_name + "_stdout.txt"
-    stdderr_name = sketch_name + "_stderr.txt"
-    with open(os.path.join(boardstd, stddout_name), "w") as stdout, open(
-        os.path.join(boardstd, stdderr_name), "w"
-    ) as stderr:
-        res = subprocess.Popen(arduino_builder_command, stdout=stdout, stderr=stderr)
+    with open(
+        os.path.join(output_dir, board_name, sketch_name + ".log"), "w"
+    ) as stdout:
+        res = subprocess.Popen(
+            arduino_builder_command, stdout=stdout, stderr=subprocess.STDOUT
+        )
         res.wait()
         check_status(res.returncode, board_name, sketch_name, boardOk, boardKo)
 
