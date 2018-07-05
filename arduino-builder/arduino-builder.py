@@ -114,6 +114,9 @@ tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
 log_file = os.path.join(output_dir, "build_result.log")
 
+# Global arduino builder command
+arduino_builder_command = []
+
 # Ouput directory path
 bin_dir = "binaries"
 std_dir = "std_folder"
@@ -285,25 +288,17 @@ def check_status(status, board_name, sketch_name, boardOk, boardKo):
 # Log sketch build result
 def log_sketch_build_result(sketch, boardOk, boardKo):
     with open(log_file, "a") as f:
-        f.write("\nSketch : " + sketch)
-        if len(boardOk):
-            f.write("\nBuild PASSED for these boards :\n")
-            for b in boardOk:
-                f.write(str(b) + "\n")
         f.write(
-            "Total build PASSED for this sketch : {} / {}".format(
-                len(boardOk), len(board_list)
+            """
+Sketch: {0}
+Build PASSED: {1}/{2}
+Build FAILED: {3}/{2}
+""".format(
+                sketch, len(boardOk), len(board_list), len(boardKo)
             )
         )
         if len(boardKo):
-            f.write("\nBuild FAILED for these boards :\n")
-            for b in boardKo:
-                f.write(str(b) + "\n")
-        f.write(
-            "\nTotal build FAILED for this sketch : {} / {}\n".format(
-                len(boardKo), len(board_list)
-            )
-        )
+            f.write("Failed boards :\n" + "\n".join(boardKo))
 
 
 # Log final result
@@ -352,32 +347,31 @@ def set_varOpt(board):
     )
 
 
-# Create arduino builder command
-def create_command(board, sketch_path):
-    cmd = []
-    cmd.append(arduino_builder)
-    cmd.append("-hardware")
-    cmd.append(arduino_hardware_path)
-    cmd.append("-hardware")
-    cmd.append(arduino_packages)
-    cmd.append("-tools")
-    cmd.append(tools_path)
-    cmd.append("-tools")
-    cmd.append(arduino_packages)
-    cmd.append("-libraries")
-    cmd.append(arduino_lib_path)
-    cmd.append("-libraries")
-    cmd.append(arduino_user_lib_path)
-    cmd.append("-fqbn")
-    cmd.append(set_varOpt(board))
-    cmd.append("-ide-version=10805")
-    cmd.append("-build-path")
-    cmd.append(build_output_dir)
-    cmd.append("-warnings=all")
+# Generate arduino builder basic command
+def genBasicCommand():
+    arduino_builder_command.append(arduino_builder)
+    arduino_builder_command.append("-hardware")
+    arduino_builder_command.append(arduino_hardware_path)
+    arduino_builder_command.append("-hardware")
+    arduino_builder_command.append(arduino_packages)
+    arduino_builder_command.append("-tools")
+    arduino_builder_command.append(tools_path)
+    arduino_builder_command.append("-tools")
+    arduino_builder_command.append(arduino_packages)
+    arduino_builder_command.append("-libraries")
+    arduino_builder_command.append(arduino_lib_path)
+    arduino_builder_command.append("-libraries")
+    arduino_builder_command.append(arduino_user_lib_path)
+    arduino_builder_command.append("-ide-version=10805")
+    arduino_builder_command.append("-build-path")
+    arduino_builder_command.append(build_output_dir)
+    arduino_builder_command.append("-warnings=all")
     if args.verbose:
-        cmd.append("-verbose")
-    cmd.append(sketch_path)
-    return cmd
+        arduino_builder_command.append("-verbose")
+    arduino_builder_command.append("-fqbn")
+    # Must always be at the end of the list
+    arduino_builder_command.append("dummy_fqbn")
+    arduino_builder_command.append("dummy_sketch")
 
 
 # Automatic run
@@ -390,36 +384,34 @@ def build_all():
         bord_nb = 0
         sketch_nb += 1
         sketch_name = os.path.basename(sketch)
-        print(
-            "\nRUNNING : {} ({}/{}) ".format(sketch_name, sketch_nb, len(sketch_list))
-        )
-        print("Sketch path : " + sketch)
+        print("\nBuilding : {} ({}/{}) ".format(sketch, sketch_nb, len(sketch_list)))
+        # Update command with sketch to build
+        arduino_builder_command[-1] = sketch
         for board in board_list:
-            board_name = board[1]
             bord_nb += 1
             sys.stdout.write(
-                "Build {} ({}/{})... ".format(board_name, bord_nb, len(board_list))
+                "Build {} ({}/{})... ".format(board[1], bord_nb, len(board_list))
             )
             sys.stdout.flush()
-
-            command = create_command(board, sketch)
-            build(command, board_name, sketch_name, boardOk, boardKo)
+            # Update command with board to build
+            arduino_builder_command[-2] = set_varOpt(board)
+            # Execute the build
+            build(board[1], sketch_name, boardOk, boardKo)
         log_sketch_build_result(sketch, boardOk, boardKo)
     log_final_result()
 
 
 # Run arduino builder command
-def build(cmd, board_name, sketch_name, boardOk, boardKo):
-    boardstd = os.path.join(
-        output_dir, board_name, std_dir
-    )  # Board specific folder that contain stdout and stderr files
+def build(board_name, sketch_name, boardOk, boardKo):
+    boardstd = os.path.join(output_dir, board_name, std_dir)
+    # Board specific folder that contain stdout and stderr files
     createFolder(boardstd)
     stddout_name = sketch_name + "_stdout.txt"
     stdderr_name = sketch_name + "_stderr.txt"
     with open(os.path.join(boardstd, stddout_name), "w") as stdout, open(
         os.path.join(boardstd, stdderr_name), "w"
     ) as stderr:
-        res = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
+        res = subprocess.Popen(arduino_builder_command, stdout=stdout, stderr=stderr)
         res.wait()
         check_status(res.returncode, board_name, sketch_name, boardOk, boardKo)
 
@@ -504,6 +496,8 @@ if args.list:
 # Create output folders
 createFolder(build_output_dir)
 createFolder(output_dir)
+# Basic build command
+genBasicCommand()
 
 manage_inos()
 find_board()
