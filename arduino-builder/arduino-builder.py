@@ -20,6 +20,7 @@ import argparse
 from datetime import timedelta
 import concurrent.futures
 
+
 # Create a Json file for a better path management
 config_filename = "config.json"
 home = os.path.expanduser("~")
@@ -485,33 +486,39 @@ sketchg1.add_argument(
 
 args = parser.parse_args()
 
-# Clean previous build results
-if args.clean:
-    deleteFolder(root_output_dir)
 
-# List boards available
-if args.list:
+def main():
+    # Clean previous build results
+    if args.clean:
+        deleteFolder(root_output_dir)
+
+    # List boards available
+    if args.list:
+        find_board()
+        print("%i board(s) available" % len(board_list))
+        for b in board_list:
+            print(b[1])
+        quit()
+
+    # Create output folders
+    createFolder(build_output_dir)
+    createFolder(output_dir)
+    # Basic build command
+    genBasicCommand()
+
+    manage_inos()
     find_board()
-    print("%i board(s) available" % len(board_list))
-    for b in board_list:
-        print(b[1])
-    quit()
 
-# Create output folders
-createFolder(build_output_dir)
-createFolder(output_dir)
-# Basic build command
-genBasicCommand()
+    # Run builder
+    build_all()
 
-manage_inos()
-find_board()
+    # Remove build output
+    deleteFolder(build_output_dir)
 
-# Run builder
-build_all()
+    if args.travis:
+        if nb_build_failed:
+            sys.exit(1)
 
-# Remove build output
-deleteFolder(build_output_dir)
 
-if args.travis:
-    if nb_build_failed:
-        sys.exit(1)
+if __name__ == "__main__":
+    main()
