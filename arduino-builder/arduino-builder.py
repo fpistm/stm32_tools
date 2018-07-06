@@ -4,7 +4,7 @@
 # Author               : Angela RANDOLPH <angela.randolph@reseau.eseo.fr>
 # Other contributors   : Frederic PILLON <frederic.pillon@st.com>
 # Created              : 26/04/2018
-# Python Version       : 2.7 / 3.x
+# Python Version       : >= 3.2 (due to concurrent.futures usage)
 
 # Description         : Used to build sketch(es) thanks to Arduino Builder
 #                       See https://github.com/arduino/arduino-builder
@@ -18,6 +18,7 @@ import subprocess
 import tempfile
 import argparse
 from datetime import timedelta
+import concurrent.futures
 
 # Create a Json file for a better path management
 config_filename = "config.json"
@@ -174,6 +175,7 @@ def create_output_log_tree():
         createFolder(os.path.join(output_dir, board[1]))
         if args.bin:
             createFolder(os.path.join(output_dir, board[1], bin_dir))
+        createFolder(os.path.join(build_output_dir, board[1]))
 
 
 def manage_exclude_list(file):
@@ -269,16 +271,17 @@ def find_board():
 
 
 # Check the status
-def check_status(status, board_name, sketch_name, boardKo):
+def check_status(status, board_name, boardKo):
     global nb_build_passed
     global nb_build_failed
+    sketch_name = os.path.basename(arduino_builder_command[-1])
     if status == 0:
-        print("SUCESS")
+        print("  --> " + board_name + " SUCESS")
         if args.bin:
             bin_copy(board_name, sketch_name)
         nb_build_passed += 1
     elif status == 1:
-        print("FAILED")
+        print("  --> " + board_name + " FAILED")
         boardKo.append(board_name)
         if args.travis:
             cat(os.path.join(output_dir, board_name, sketch_name + ".log"))
@@ -296,7 +299,7 @@ Sketch: {0}
 Build PASSED: {1}/{2}
 Build FAILED: {3}/{2}
 """.format(
-                sketch, len(board_list)-len(boardKo), len(board_list), len(boardKo)
+                sketch, len(board_list) - len(boardKo), len(board_list), len(boardKo)
             )
         )
         if len(boardKo):
@@ -371,13 +374,13 @@ def genBasicCommand():
     arduino_builder_command.append("-libraries")
     arduino_builder_command.append(arduino_user_lib_path)
     arduino_builder_command.append("-ide-version=10805")
-    arduino_builder_command.append("-build-path")
-    arduino_builder_command.append(build_output_dir)
     arduino_builder_command.append("-warnings=all")
     if args.verbose:
         arduino_builder_command.append("-verbose")
-    arduino_builder_command.append("-fqbn")
     # Must always be at the end of the list
+    arduino_builder_command.append("-build-path")
+    arduino_builder_command.append(build_output_dir)
+    arduino_builder_command.append("-fqbn")
     arduino_builder_command.append("dummy_fqbn")
     arduino_builder_command.append("dummy_sketch")
 
@@ -387,31 +390,32 @@ def build_all():
     create_output_log_tree()
     for sketch_nb, sketch in enumerate(sketch_list, start=1):
         boardKo = []
-        sketch_name = os.path.basename(sketch)
         print("\nBuilding : {} ({}/{}) ".format(sketch, sketch_nb, len(sketch_list)))
         # Update command with sketch to build
         arduino_builder_command[-1] = sketch
-        for bord_nb, board in enumerate(board_list, start=1):
-            sys.stdout.write(
-                "Build {} ({}/{})... ".format(board[1], bord_nb, len(board_list))
-            )
-            sys.stdout.flush()
-            # Update command with board to build
-            arduino_builder_command[-2] = set_varOpt(board)
-            # Execute the build
-            check_status(build(board[1]), board[1], sketch_name, boardKo)
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            for board, res in zip(board_list, executor.map(build, board_list)):
+                check_status(res, board[1], boardKo)
         log_sketch_build_result(sketch, boardKo)
     log_final_result()
 
 
 # Run arduino builder command
-def build(board_name):
-    with open(
-        os.path.join(output_dir, board_name, os.path.basename(arduino_builder_command[-1]) + ".log"), "w"
-    ) as stdout:
-        res = subprocess.Popen(
-            arduino_builder_command, stdout=stdout, stderr=subprocess.STDOUT
+def build(board):
+    # Copy arduino_builder_command
+    myCmd = list(arduino_builder_command)
+    print(
+        "Build {} ({}/{})... ".format(
+            board[1], board_list.index(board) + 1, len(board_list)
         )
+    )
+    # Update command with board to build
+    myCmd[-2] = set_varOpt(board)
+    myCmd[-4] = os.path.join(build_output_dir, board[1])
+    with open(
+        os.path.join(output_dir, board[1], os.path.basename(myCmd[-1]) + ".log"), "w"
+    ) as stdout:
+        res = subprocess.Popen(myCmd, stdout=stdout, stderr=subprocess.STDOUT)
         res.wait()
         return res.returncode
 
