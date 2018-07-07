@@ -117,8 +117,6 @@ tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
 log_file = os.path.join(output_dir, "build_result.log")
 
-# Global arduino builder command
-arduino_builder_command = []
 
 # Ouput directory path
 bin_dir = "binaries"
@@ -272,20 +270,20 @@ def find_board():
 
 
 # Check the status
-def check_status(status, board_name, boardKo):
+def check_status(status, build_conf, boardKo):
     global nb_build_passed
     global nb_build_failed
-    sketch_name = os.path.basename(arduino_builder_command[-1])
+    sketch_name = os.path.basename(build_conf[4][-1])
     if status == 0:
-        print("  --> " + board_name + " SUCESS")
+        print("  --> " + build_conf[0] + " SUCESS")
         if args.bin:
-            bin_copy(board_name, sketch_name)
+            bin_copy(build_conf[0], sketch_name)
         nb_build_passed += 1
     elif status == 1:
-        print("  --> " + board_name + " FAILED")
-        boardKo.append(board_name)
+        print("  --> " + build_conf[0] + " FAILED")
+        boardKo.append(build_conf[0])
         if args.travis:
-            cat(os.path.join(output_dir, board_name, sketch_name + ".log"))
+            cat(os.path.join(build_conf[3], sketch_name + ".log"))
         nb_build_failed += 1
     else:
         print("Error ! Check the run_command exit status ! Return code = " + status)
@@ -337,7 +335,7 @@ def log_final_result():
 def bin_copy(board_name, sketch_name):
     try:
         shutil.copy(
-            os.path.join(build_output_dir, sketch_name + ".bin"),
+            os.path.join(build_output_dir, board_name, sketch_name + ".bin"),
             os.path.abspath(os.path.join(output_dir, board_name, bin_dir)),
         )
     except OSError as e:
@@ -360,63 +358,77 @@ def set_varOpt(board):
 
 
 # Generate arduino builder basic command
-def genBasicCommand():
-    arduino_builder_command.append(arduino_builder)
-    arduino_builder_command.append("-hardware")
-    arduino_builder_command.append(arduino_hardware_path)
-    arduino_builder_command.append("-hardware")
-    arduino_builder_command.append(arduino_packages)
-    arduino_builder_command.append("-tools")
-    arduino_builder_command.append(tools_path)
-    arduino_builder_command.append("-tools")
-    arduino_builder_command.append(arduino_packages)
-    arduino_builder_command.append("-libraries")
-    arduino_builder_command.append(arduino_lib_path)
-    arduino_builder_command.append("-libraries")
-    arduino_builder_command.append(arduino_user_lib_path)
-    arduino_builder_command.append("-ide-version=10805")
-    arduino_builder_command.append("-warnings=all")
+def genBasicCommand(board):
+    cmd = []
+    cmd.append(arduino_builder)
+    cmd.append("-hardware")
+    cmd.append(arduino_hardware_path)
+    cmd.append("-hardware")
+    cmd.append(arduino_packages)
+    cmd.append("-tools")
+    cmd.append(tools_path)
+    cmd.append("-tools")
+    cmd.append(arduino_packages)
+    cmd.append("-libraries")
+    cmd.append(arduino_lib_path)
+    cmd.append("-libraries")
+    cmd.append(arduino_user_lib_path)
+    cmd.append("-ide-version=10805")
+    cmd.append("-warnings=all")
     if args.verbose:
-        arduino_builder_command.append("-verbose")
-    # Must always be at the end of the list
-    arduino_builder_command.append("-build-path")
-    arduino_builder_command.append(build_output_dir)
-    arduino_builder_command.append("-fqbn")
-    arduino_builder_command.append("dummy_fqbn")
-    arduino_builder_command.append("dummy_sketch")
+        cmd.append("-verbose")
+    cmd.append("-build-path")
+    cmd.append(os.path.join(build_output_dir, board[1]))
+    cmd.append("-fqbn")
+    cmd.append(set_varOpt(board))
+    cmd.append("dummy_sketch")
+    return cmd
+
+
+def create_build_conf_list():
+    build_conf_list = []
+    for idx, board in enumerate(board_list):
+        build_conf_list.append(
+            (
+                board[1],
+                idx + 1,
+                len(board_list),
+                os.path.join(output_dir, board[1]),
+                genBasicCommand(board),
+            )
+        )
+    return build_conf_list
 
 
 # Automatic run
 def build_all():
     create_output_log_tree()
+    build_conf_list = create_build_conf_list()
+
     for sketch_nb, sketch in enumerate(sketch_list, start=1):
         boardKo = []
         print("\nBuilding : {} ({}/{}) ".format(sketch, sketch_nb, len(sketch_list)))
         # Update command with sketch to build
-        arduino_builder_command[-1] = sketch
+        for idx in range(len(build_conf_list)):
+            build_conf_list[idx][4][-1] = sketch
+
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            for board, res in zip(board_list, executor.map(build, board_list)):
-                check_status(res, board[1], boardKo)
+            for build_conf, res in zip(
+                build_conf_list, executor.map(build, build_conf_list)
+            ):
+                check_status(res, build_conf, boardKo)
         log_sketch_build_result(sketch, boardKo)
     log_final_result()
 
 
 # Run arduino builder command
-def build(board):
-    # Copy arduino_builder_command
-    myCmd = list(arduino_builder_command)
-    print(
-        "Build {} ({}/{})... ".format(
-            board[1], board_list.index(board) + 1, len(board_list)
-        )
-    )
-    # Update command with board to build
-    myCmd[-2] = set_varOpt(board)
-    myCmd[-4] = os.path.join(build_output_dir, board[1])
+def build(build_conf):
+    cmd = build_conf[4]
+    print("Build {} ({}/{})... ".format(build_conf[0], build_conf[1], build_conf[2]))
     with open(
-        os.path.join(output_dir, board[1], os.path.basename(myCmd[-1]) + ".log"), "w"
+        os.path.join(build_conf[3], os.path.basename(cmd[-1]) + ".log"), "w"
     ) as stdout:
-        res = subprocess.Popen(myCmd, stdout=stdout, stderr=subprocess.STDOUT)
+        res = subprocess.Popen(cmd, stdout=stdout, stderr=subprocess.STDOUT)
         res.wait()
         return res.returncode
 
@@ -488,36 +500,27 @@ args = parser.parse_args()
 
 
 def main():
-    # Clean previous build results
     if args.clean:
         deleteFolder(root_output_dir)
 
-    # List boards available
+    find_board()
     if args.list:
-        find_board()
         print("%i board(s) available" % len(board_list))
         for b in board_list:
             print(b[1])
         quit()
 
-    # Create output folders
     createFolder(build_output_dir)
     createFolder(output_dir)
-    # Basic build command
-    genBasicCommand()
 
     manage_inos()
-    find_board()
 
-    # Run builder
     build_all()
 
-    # Remove build output
     deleteFolder(build_output_dir)
 
-    if args.travis:
-        if nb_build_failed:
-            sys.exit(1)
+    if nb_build_failed:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
