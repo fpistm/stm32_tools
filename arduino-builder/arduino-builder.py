@@ -17,9 +17,9 @@ import shutil
 import subprocess
 import tempfile
 import argparse
-from datetime import timedelta
 import concurrent.futures
-
+import collections
+from datetime import timedelta
 
 # Create a Json file for a better path management
 config_filename = "config.json"
@@ -117,7 +117,6 @@ tools_path = os.path.join(arduino_path, "tools-builder")
 output_dir = os.path.join(root_output_dir, "build" + build_id)
 log_file = os.path.join(output_dir, "build_result.log")
 
-
 # Ouput directory path
 bin_dir = "binaries"
 
@@ -126,6 +125,7 @@ sketch_default = os.path.join(
     arduino_sketchbook_path, "01.Basics", "Blink", "Blink.ino"
 )
 exclude_file_default = os.path.join("conf", "exclude_list.txt")
+core_path = ""
 
 # List
 sketch_list = []
@@ -158,6 +158,7 @@ def deleteFolder(folder):
 def cat(file):
     with open(file, "r") as f:
         print(f.read())
+    print("")
 
 
 # Create the log output file and folders
@@ -178,8 +179,6 @@ def create_output_log_tree():
 
 
 def manage_exclude_list(file):
-    global exclude_list
-    global sketch_list
     with open(file, "r") as f:
         for line in f.readlines():
             exclude_list.append(line.rstrip())
@@ -194,11 +193,9 @@ def manage_exclude_list(file):
 
 # Manage sketches list
 def manage_inos():
-    global sketch_list
-    global exclude_list
     # Find all inos or all patterned inos
-    if args.all or args.sketches:
-        sketch_list = find_inos()
+    if args.all or args.sketches or args.list == "sketch":
+        find_inos()
         if args.exclude:
             assert os.path.exists(args.exclude), "Exclude list file does not exist"
             manage_exclude_list(args.exclude)
@@ -207,12 +204,12 @@ def manage_inos():
     # Only one ino
     elif args.ino:
         if os.path.exists(args.ino):
-            sketch_list = [args.ino]
+            sketch_list.append(args.ino)
         else:
             assert os.path.exists(
                 os.path.join(arduino_path, args.ino)
             ), "Ino path does not exist"
-            sketch_list = [os.path.join(arduino_path, args.ino)]
+            sketch_list.append(os.path.join(arduino_path, args.ino))
     # Inos listed in a file
     elif args.file:
         assert os.path.exists(args.file), "Sketches list file does not exist"
@@ -227,32 +224,63 @@ def manage_inos():
                     print("Ignore {} as does not exist.".format(ino))
     # Default ino to build
     else:
-        sketch_list = [sketch_default]
+        sketch_list.append(sketch_default)
     assert len(sketch_list), "No sketch to build!"
 
 
 # Find all .ino files
 def find_inos():
-    inoList = []
-    for root, dirs, files in os.walk(arduino_path, followlinks=True):
-        for file in files:
-            if file.endswith(".ino"):
-                if args.sketches:
-                    regex = ".*(" + args.sketches + ").*"
-                    x = re.match(regex, os.path.join(root, file), re.IGNORECASE)
-                    if x:
-                        inoList.append(os.path.join(root, x.group(0)))
-                else:
-                    inoList.append(os.path.join(root, file))
-    return sorted(inoList)
+    # Path list order must be kept as we avoid duplicated sketch name
+    # Last one found will be kept
+    # Preferred order is: user, core then offical
+    pathList = [
+        arduino_sketchbook_path,
+        arduino_lib_path,
+        core_path,
+        arduino_user_sketchbook,
+    ]
+    # key: path, value: name
+    ordered_path = collections.OrderedDict()
+    # key: name, value: path
+    ordered_name = collections.OrderedDict()
+    for path in pathList:
+        for root, dirs, files in os.walk(path, followlinks=True):
+            for file in files:
+                if file.endswith((".ino", ".pde")):
+                    if args.sketches:
+                        regex = ".*(" + args.sketches + ").*"
+                        if (
+                            re.match(regex, os.path.join(root, file), re.IGNORECASE)
+                            is None
+                        ):
+                            continue
+                    if root in ordered_path:
+                        # If several sketch are in the same path
+                        # Check which one to kept
+                        # Commonly, example structure is:
+                        # dirname/dirname.ino
+                        if (
+                            os.path.basename(root)
+                            == os.path.splitext(ordered_path[root])[0]
+                        ):
+                            continue
+                    ordered_path[root] = file
+    # Remove duplicated sketch name
+    for path, name in ordered_path.items():
+        ordered_name[name] = path
+    for name, path in ordered_name.items():
+        sketch_list.append(os.path.join(path, name))
+    sketch_list.sort()
 
 
 # Return a list of all board types and names using the board.txt file for
 # stm32 architecture
 def find_board():
+    global core_path
     for path in [arduino_packages, arduino_hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
             if "boards.txt" in files and "stm32" in root:
+                core_path = root
                 with open(os.path.join(root, "boards.txt"), "r") as f:
                     regex = "(.+)\.menu\.pnum\.([^\.]+)="
                     for line in f.readlines():
@@ -266,7 +294,7 @@ def find_board():
                             board_list.append((x.group(1), x.group(2)))
                 break
     assert len(board_list), "No board found!"
-    return sorted(board_list)
+    sorted(board_list)
 
 
 # Check the status
@@ -294,11 +322,17 @@ def log_sketch_build_result(sketch, boardKo):
     with open(log_file, "a") as f:
         f.write(
             """
-Sketch: {0}
-Build PASSED: {1}/{2}
-Build FAILED: {3}/{2}
+Sketch: {0}/{1}
+{2}
+Build PASSED: {3}/{4}
+Build FAILED: {5}/{4}
 """.format(
-                sketch, len(board_list) - len(boardKo), len(board_list), len(boardKo)
+                sketch_list.index(sketch) + 1,
+                len(sketch_list),
+                sketch,
+                len(board_list) - len(boardKo),
+                len(board_list),
+                len(boardKo),
             )
         )
         if len(boardKo):
@@ -440,7 +474,15 @@ parser = argparse.ArgumentParser(
 )
 
 g0 = parser.add_mutually_exclusive_group()
-g0.add_argument("-l", "--list", help="list of available board(s)", action="store_true")
+g0.add_argument(
+    "-l",
+    "--list",
+    help="list available board(s) or sketch(es)",
+    nargs="?",
+    const="board",
+    # default="board",
+    choices=("board", "sketch"),
+)
 g0.add_argument(
     "-a",
     "--all",
@@ -504,16 +546,21 @@ def main():
         deleteFolder(root_output_dir)
 
     find_board()
-    if args.list:
+    if args.list == "board":
         print("%i board(s) available" % len(board_list))
-        for b in board_list:
-            print(b[1])
+        for board in board_list:
+            print(board[1])
+        quit()
+
+    manage_inos()
+    if args.list == "sketch":
+        for sketch in sketch_list:
+            print(sketch)
+        print("%i sketches found" % len(sketch_list))
         quit()
 
     createFolder(build_output_dir)
     createFolder(output_dir)
-
-    manage_inos()
 
     build_all()
 
