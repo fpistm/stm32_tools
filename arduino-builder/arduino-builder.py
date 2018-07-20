@@ -290,11 +290,10 @@ def manage_exclude_list(file):
                 exclude_list.append(line.rstrip())
     if exclude_list:
         for pattern in exclude_list:
-            regex = ".*(" + pattern + ").*"
+            exclude_pattern = re.compile(".*" + pattern + ".*", re.IGNORECASE)
             for s in reversed(sketch_list):
-                x = re.match(regex, s, re.IGNORECASE)
-                if x:
-                    sketch_list.remove(x.group(0))
+                if exclude_pattern.search(s):
+                    sketch_list.remove(s)
 
 
 # Manage sketches list
@@ -350,16 +349,14 @@ def find_inos():
     ordered_path = collections.OrderedDict()
     # key: name, value: path
     ordered_name = collections.OrderedDict()
+    if args.sketches:
+        arg_sketch_pattern = re.compile(args.sketches, re.IGNORECASE)
     for path in pathList:
         for root, dirs, files in os.walk(path, followlinks=True):
             for file in files:
                 if file.endswith((".ino", ".pde")):
                     if args.sketches:
-                        regex = ".*(" + args.sketches + ").*"
-                        if (
-                            re.match(regex, os.path.join(root, file), re.IGNORECASE)
-                            is None
-                        ):
+                        if arg_sketch_pattern.search(os.path.join(root, file)) is None:
                             continue
                     if root in ordered_path:
                         # If several sketch are in the same path
@@ -392,22 +389,30 @@ def find_board():
     # Nucleo_144.menu.pnum.NUCLEO_L496ZG-P.build.variant=NUCLEO_L496ZG
     # genericSTM32F103C.menu.device_variant.STM32F103C8=
     # genericSTM32F103R.menu.device_variant.STM32F103R8.build.variant
-    regex = (
+    board_pattern = re.compile(
         "([^#\.]+)(?:\.menu\.(?:pnum|device_variant)\.)?([^\.]+)?(?:\.build\.variant)?="
     )
-
+    core_pattern = re.compile(
+        os.path.sep + maintainer + os.path.sep + ".*" + os.path.sep + "?" + arch
+    )
+    if args.board:
+        arg_board_pattern = re.compile(args.board, re.IGNORECASE)
     for path in [arduino_packages, arduino_hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
-            if "boards.txt" in files and os.path.join(maintainer, arch) in root:
+            if "boards.txt" in files and core_pattern.search(root):
                 core_path = root
                 with open(os.path.join(root, "boards.txt"), "r") as f:
                     for line in f.readlines():
-                        res = re.match(regex, line)
+                        res = board_pattern.match(line)
                         if res:
                             if args.board:
-                                reg = ".*(" + args.board + ").*"
-                                if re.match(reg, res.group(0), re.IGNORECASE) is None:
-                                    continue
+                                if res.lastindex == 1:
+                                    if arg_board_pattern.search(res.group(1)) is None:
+                                        continue
+                                else:
+                                    if arg_board_pattern.search(res.group(2)) is None:
+                                        continue
+
                             if res.lastindex == 1:
                                 board_found[res.group(1)] = ""
                             else:
@@ -590,8 +595,7 @@ def build_config(gen_build_conf_list, sketch, boardSkipped):
         if na_sketch_pattern:
             if build_conf_list[idx][0] in na_sketch_pattern:
                 for pattern in na_sketch_pattern[build_conf_list[idx][0]]:
-                    regex = ".*(" + pattern + ").*"
-                    if re.match(regex, sketch, re.IGNORECASE):
+                    if re.search(pattern, sketch, re.IGNORECASE):
                         print(
                             "Build {} ({}/{})... SKIPPED".format(
                                 build_conf_list[idx][0],
@@ -607,8 +611,7 @@ def build_config(gen_build_conf_list, sketch, boardSkipped):
                     # get specific sketch options to append to the fqbn
                     for pattern in sketch_options:
                         if pattern in sketch_options:
-                            regex = ".*(" + pattern + ").*"
-                            if re.match(regex, sketch, re.IGNORECASE):
+                            if re.search(pattern, sketch, re.IGNORECASE):
                                 if build_conf_list[idx][4][-2].count(":") == 3:
                                     build_conf_list[idx][4][-2] += (
                                         "," + sketch_options[pattern]
