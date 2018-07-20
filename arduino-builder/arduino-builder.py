@@ -454,7 +454,7 @@ Build SKIPPED: {6}/{4}
                 sketch_list.index(sketch) + 1,
                 len(sketch_list),
                 sketch,
-                len(board_type) - len(boardKo),
+                len(board_type) - len(boardKo) - len(boardSkipped),
                 len(board_type),
                 len(boardKo),
                 len(boardSkipped),
