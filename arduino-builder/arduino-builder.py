@@ -22,21 +22,21 @@ import collections
 from datetime import timedelta
 
 # Create a Json file for a better path management
-config_filename = "config.json"
+path_config_filename = "path_config.json"
 home = os.path.expanduser("~")
 tempdir = tempfile.gettempdir()
 build_id = time.strftime("_%Y-%m-%d_%H-%M-%S")
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 try:
-    config_file = open(config_filename, "r")
+    path_config_file = open(path_config_filename, "r")
 except IOError:
     print(
         "Please set your configuration in '{}' file".format(
-            os.path.join(script_path, config_filename)
+            os.path.join(script_path, path_config_filename)
         )
     )
-    config_file = open(config_filename, "w")
+    path_config_file = open(path_config_filename, "w")
     if sys.platform.startswith("win32"):
         print("Default config set for Windows environment.")
         arduino_path = "C:\\Program Files (x86)\\Arduino"  # arduino default path
@@ -66,7 +66,7 @@ except IOError:
         arduino_user_sketchbook = "<Set the user sketchbook location>"
         build_output_dir = "<Set arduino builder temporary folder install path>"
         root_output_dir = "<Set your output directory path>"
-    config_file.write(
+    path_config_file.write(
         json.dumps(
             {
                 "ARDUINO_PATH": arduino_path,
@@ -78,18 +78,18 @@ except IOError:
             indent=2,
         )
     )
-    config_file.close()
+    path_config_file.close()
     exit(1)
 
-config = json.load(config_file)
-config_file.close()
+path_config = json.load(path_config_file)
+path_config_file.close()
 
 # Common path
-arduino_path = config["ARDUINO_PATH"]
-arduino_packages = config["ARDUINO_PACKAGES"]
-arduino_user_sketchbook = config["ARDUINO_USER_SKETCHBOOK"]
-build_output_dir = config["BUILD_OUPUT_DIR"] + build_id
-root_output_dir = config["ROOT_OUPUT_DIR"]
+arduino_path = path_config["ARDUINO_PATH"]
+arduino_packages = path_config["ARDUINO_PACKAGES"]
+arduino_user_sketchbook = path_config["ARDUINO_USER_SKETCHBOOK"]
+build_output_dir = path_config["BUILD_OUPUT_DIR"] + build_id
+root_output_dir = path_config["ROOT_OUPUT_DIR"]
 
 assert os.path.exists(
     arduino_path
@@ -125,16 +125,31 @@ sketch_default = os.path.join(
     arduino_sketchbook_path, "01.Basics", "Blink", "Blink.ino"
 )
 exclude_file_default = os.path.join("conf", "exclude_list.txt")
+cores_config_file_default = os.path.join("conf", "cores_config.json")
+
+maintainer_default = "STM32"
+arch_default = "stm32"
+
+core_config = None
+maintainer = maintainer_default
+arch = arch_default
 core_path = ""
 
 # List
 sketch_list = []
-board_list = []  # (board type, board name)
 exclude_list = []
+
+# Dict
+board_type = collections.OrderedDict()  # (key: board name, value: board type)
+board_fqbn = {}  # key: board name, value: fqbn
+board_options = {}  # key: board name, value: options
+sketch_options = {}  # key: sketch pattern, value: options
+na_sketch_pattern = {}  # key: board name, value: sketch pattern list
 
 # Counter
 nb_build_passed = 0
 nb_build_failed = 0
+nb_build_skipped = 0
 
 # Timing
 startTime = time.time()
@@ -171,17 +186,108 @@ def create_output_log_tree():
         file.write(time.strftime("%A %d %B %Y %H:%M:%S "))
         file.write("\nPath : {} \n".format(os.path.abspath(output_dir)))
     # Folders
-    for board in board_list:
-        createFolder(os.path.join(output_dir, board[1]))
+    for board in board_type:
+        createFolder(os.path.join(output_dir, board))
         if args.bin:
-            createFolder(os.path.join(output_dir, board[1], bin_dir))
-        createFolder(os.path.join(build_output_dir, board[1]))
+            createFolder(os.path.join(output_dir, board, bin_dir))
+        createFolder(os.path.join(build_output_dir, board))
+
+
+def load_core_config():
+    global core_config
+    global maintainer
+    global arch
+    cores_config_filename = ""
+    if args.config:
+        assert os.path.exists(
+            args.config
+        ), "User core configuration JSON file does not exist"
+        cores_config_filename = args.config
+    else:
+        cores_config_filename = cores_config_file_default
+    print("Cores configuration JSON file that will be used: " + cores_config_filename)
+    try:
+        cores_config_file = open(cores_config_filename, "r")
+        cores_config = json.load(cores_config_file)
+        cores_config_file.close()
+
+        if args.arch:
+            arch = args.arch
+        for core in cores_config["cores"]:
+            if arch == core["architecture"]:
+                core_config = core
+                maintainer = core["maintainer"]
+                print(
+                    "Build configuration for '"
+                    + maintainer
+                    + "' maintainer and '"
+                    + arch
+                    + "' architecture"
+                )
+                break
+        else:
+            print(
+                "Core architecture '" + arch + "' not found in " + cores_config_filename
+            )
+            arch = arch_default
+            core_config = None
+    except IOError:
+        print(
+            "Can't open {} file. Build configuration will not be used.".format(
+                cores_config_filename
+            )
+        )
+    finally:
+        if core_config is None:
+            print(
+                "Using default configuration for '"
+                + maintainer_default
+                + "' maintainer and '"
+                + arch_default
+                + "' architecture"
+            )
+
+
+# Board list have to be initialized before call this function
+def parse_core_config():
+    assert board_type, "Board list not initialized"
+    # Extract boards names to create a set
+    board_name_set = set([board for board in board_type])
+    for sketch in core_config["sketches"]:
+        if sketch["applicable"] is True:
+            # Remove boards in the list
+            na_board_set = board_name_set - set(sketch["boards"])
+        else:
+            # Add boards in the list
+            na_board_set = set(sketch["boards"]) - (
+                set(sketch["boards"]) - board_name_set
+            )
+        if "options" in sketch:
+            sketch_options[sketch["pattern"]] = sketch["options"]
+        if len(na_board_set):
+            for board_name in na_board_set:
+                if board_name in na_sketch_pattern:
+                    na_sketch_pattern[board_name].append(sketch["pattern"])
+                else:
+                    na_sketch_pattern[board_name] = [sketch["pattern"]]
+
+    for board in core_config["boards"]:
+        if "fqbn" in board:
+            board_fqbn[board["name"]] = board["fqbn"]
+        if "options" in board:
+            board_options[board["name"]] = board["options"]
+
+    # for key, value in na_sketch_pattern.items():
+    #    print("{}: {}\n".format(key, value))
+    # for key, value in board_fqbn.items():
+    #    print("{}: {}\n".format(key, value))
 
 
 def manage_exclude_list(file):
     with open(file, "r") as f:
         for line in f.readlines():
-            exclude_list.append(line.rstrip())
+            if line.rstrip():
+                exclude_list.append(line.rstrip())
     if exclude_list:
         for pattern in exclude_list:
             regex = ".*(" + pattern + ").*"
@@ -197,32 +303,33 @@ def manage_inos():
     if args.all or args.sketches or args.list == "sketch":
         find_inos()
         if args.exclude:
-            assert os.path.exists(args.exclude), "Exclude list file does not exist"
+            assert os.path.exists(args.exclude), "Excluded list file does not exist"
             manage_exclude_list(args.exclude)
         elif os.path.exists(exclude_file_default):
             manage_exclude_list(exclude_file_default)
-    # Only one ino
+    # Only one sketch
     elif args.ino:
         if os.path.exists(args.ino):
             sketch_list.append(args.ino)
         else:
             assert os.path.exists(
                 os.path.join(arduino_path, args.ino)
-            ), "Ino path does not exist"
+            ), "Sketch path does not exist"
             sketch_list.append(os.path.join(arduino_path, args.ino))
-    # Inos listed in a file
+    # Sketches listed in a file
     elif args.file:
         assert os.path.exists(args.file), "Sketches list file does not exist"
         with open(args.file, "r") as f:
             for line in f.readlines():
-                ino = line.rstrip()
-                if os.path.exists(ino):
-                    sketch_list.append(ino)
-                elif os.path.exists(os.path.join(arduino_path, ino)):
-                    sketch_list.append(os.path.join(arduino_path, ino))
-                else:
-                    print("Ignore {} as does not exist.".format(ino))
-    # Default ino to build
+                if line.rstrip():
+                    ino = line.rstrip()
+                    if os.path.exists(ino):
+                        sketch_list.append(ino)
+                    elif os.path.exists(os.path.join(arduino_path, ino)):
+                        sketch_list.append(os.path.join(arduino_path, ino))
+                    else:
+                        print("Ignore {} as does not exist.".format(ino))
+    # Default sketch to build
     else:
         sketch_list.append(sketch_default)
     assert len(sketch_list), "No sketch to build!"
@@ -273,28 +380,44 @@ def find_inos():
     sketch_list.sort()
 
 
-# Return a list of all board types and names using the board.txt file for
-# stm32 architecture
+# Return a list of all board using the board.txt file for the specified architecture
 def find_board():
     global core_path
+    global board_type
+    board_found = {}
+    # board can be available at 2 differents menu levels:
+    #  - First:
+    # genericSTM32F103C.build.variant=generic_stm32f103c
+    #  - Second:
+    # Nucleo_144.menu.pnum.NUCLEO_L496ZG-P.build.variant=NUCLEO_L496ZG
+    # genericSTM32F103C.menu.device_variant.STM32F103C8=
+    # genericSTM32F103R.menu.device_variant.STM32F103R8.build.variant
+    regex = (
+        "([^#\.]+)(?:\.menu\.(?:pnum|device_variant)\.)?([^\.]+)?(?:\.build\.variant)?="
+    )
+
     for path in [arduino_packages, arduino_hardware_path]:
         for root, dirs, files in os.walk(path, followlinks=True):
-            if "boards.txt" in files and "stm32" in root:
+            if "boards.txt" in files and os.path.join(maintainer, arch) in root:
                 core_path = root
                 with open(os.path.join(root, "boards.txt"), "r") as f:
-                    regex = "(.+)\.menu\.pnum\.([^\.]+)="
                     for line in f.readlines():
-                        x = re.match(regex, line)
-                        if x:
+                        res = re.match(regex, line)
+                        if res:
                             if args.board:
                                 reg = ".*(" + args.board + ").*"
-                                if re.match(reg, x.group(0), re.IGNORECASE) is None:
+                                if re.match(reg, res.group(0), re.IGNORECASE) is None:
                                     continue
-                            # board type, board name
-                            board_list.append((x.group(1), x.group(2)))
-                break
-    assert len(board_list), "No board found!"
-    sorted(board_list)
+                            if res.lastindex == 1:
+                                board_found[res.group(1)] = ""
+                            else:
+                                if res.group(1) in board_found:
+                                    del board_found[res.group(1)]
+                                board_found[res.group(2)] = res.group(1)
+                if board_found:
+                    board_type = collections.OrderedDict(sorted(board_found.items()))
+                    return
+    assert board_type, "No board found!"
 
 
 # Check the status
@@ -318,7 +441,7 @@ def check_status(status, build_conf, boardKo):
 
 
 # Log sketch build result
-def log_sketch_build_result(sketch, boardKo):
+def log_sketch_build_result(sketch, boardKo, boardSkipped):
     with open(log_file, "a") as f:
         f.write(
             """
@@ -326,28 +449,41 @@ Sketch: {0}/{1}
 {2}
 Build PASSED: {3}/{4}
 Build FAILED: {5}/{4}
+Build SKIPPED: {6}/{4}
 """.format(
                 sketch_list.index(sketch) + 1,
                 len(sketch_list),
                 sketch,
-                len(board_list) - len(boardKo),
-                len(board_list),
+                len(board_type) - len(boardKo),
+                len(board_type),
                 len(boardKo),
+                len(boardSkipped),
             )
         )
         if len(boardKo):
             f.write("Failed boards :\n" + "\n".join(boardKo))
+        if len(boardSkipped):
+            f.write("Skipped boards :\n" + "\n".join(boardSkipped))
 
 
 # Log final result
 def log_final_result():
-    # Also equal to len(board_list) * len(sketch_list)
-    nb_build_total = nb_build_passed + nb_build_failed
+    # Also equal to len(board_type) * len(sketch_list)
+    nb_build_total = nb_build_passed + nb_build_failed + nb_build_skipped
     passed = "TOTAL PASSED = {}/{} ({}%) ".format(
-        nb_build_passed, nb_build_total, round(nb_build_passed * 100.0 / nb_build_total)
+        nb_build_passed,
+        nb_build_total,
+        round(nb_build_passed * 100.0 / nb_build_total, 2),
     )
     failed = "TOTAL FAILED = {}/{} ({}%) ".format(
-        nb_build_failed, nb_build_total, round(nb_build_failed * 100.0 / nb_build_total)
+        nb_build_failed,
+        nb_build_total,
+        round(nb_build_failed * 100.0 / nb_build_total, 2),
+    )
+    skipped = "TOTAL SKIPPED = {}/{} ({}%) ".format(
+        nb_build_skipped,
+        nb_build_total,
+        round(nb_build_skipped * 100.0 / nb_build_total, 2),
     )
     duration = str(timedelta(seconds=time.time() - startTime))
     with open(log_file, "a") as f:
@@ -355,11 +491,13 @@ def log_final_result():
         f.write(time.strftime("%A %d %B %Y %H:%M:%S\n"))
         f.write("{}\n".format(passed))
         f.write("{}\n".format(failed))
-        f.write("Logs are available here: " + output_dir)
+        f.write("{}\n".format(skipped))
+        f.write("Logs are available here: {}\n".format(output_dir))
         f.write("Build duration: " + duration)
     print("\n****************** PROCESSING COMPLETED ******************")
     print(passed)
     print(failed)
+    print(skipped)
     print("Logs are available here: " + output_dir)
     print("Build duration: " + duration)
 
@@ -381,18 +519,26 @@ def bin_copy(board_name, sketch_name):
 
 
 # Set up specific options to customise arduino builder command
-def set_varOpt(board):
-    return (
-        "STM32:stm32:"
-        + board[0]
-        + ":pnum="
-        + board[1]
-        + ",upload_method=STLink,xserial=generic,opt=osstd"
-    )
+def get_fqbn(b_name, b_type):
+    if b_name in board_fqbn and board_fqbn[b_name]:
+        return board_fqbn[b_name]
+    else:
+        if b_type:
+            if arch == "stm32":
+                opt = b_type + ":pnum=" + b_name
+            else:
+                opt = b_type + ":device_variant=" + b_name
+            if b_name in board_options and board_options[b_name]:
+                opt += "," + board_options[b_name]
+        else:
+            opt = b_name
+            if b_name in board_options and board_options[b_name]:
+                opt += ":" + board_options[b_name]
+    return maintainer + ":" + arch + ":" + opt
 
 
 # Generate arduino builder basic command
-def genBasicCommand(board):
+def genBasicCommand(b_name, b_type):
     cmd = []
     cmd.append(arduino_builder)
     cmd.append("-hardware")
@@ -412,53 +558,92 @@ def genBasicCommand(board):
     if args.verbose:
         cmd.append("-verbose")
     cmd.append("-build-path")
-    cmd.append(os.path.join(build_output_dir, board[1]))
+    cmd.append(os.path.join(build_output_dir, b_name))
     cmd.append("-fqbn")
-    cmd.append(set_varOpt(board))
+    cmd.append(get_fqbn(b_name, b_type))
     cmd.append("dummy_sketch")
     return cmd
 
 
 def create_build_conf_list():
     build_conf_list = []
-    for idx, board in enumerate(board_list):
+    idx = 1
+    for b_name in board_type:
         build_conf_list.append(
             (
-                board[1],
-                idx + 1,
-                len(board_list),
-                os.path.join(output_dir, board[1]),
-                genBasicCommand(board),
+                b_name,
+                idx,
+                len(board_type),
+                os.path.join(output_dir, b_name),
+                genBasicCommand(b_name, board_type[b_name]),
             )
         )
+        idx += 1
+    return build_conf_list
+
+
+def build_config(gen_build_conf_list, sketch, boardSkipped):
+    global nb_build_skipped
+    build_conf_list = list(gen_build_conf_list)
+    for idx in reversed(range(len(build_conf_list))):
+        build_conf_list[idx][4][-1] = sketch
+        if na_sketch_pattern:
+            if build_conf_list[idx][0] in na_sketch_pattern:
+                for pattern in na_sketch_pattern[build_conf_list[idx][0]]:
+                    regex = ".*(" + pattern + ").*"
+                    if re.match(regex, sketch, re.IGNORECASE):
+                        print(
+                            "Build {} ({}/{})... SKIPPED".format(
+                                build_conf_list[idx][0],
+                                build_conf_list[idx][1],
+                                build_conf_list[idx][2],
+                            )
+                        )
+                        boardSkipped.append(build_conf_list[idx][0])
+                        del build_conf_list[idx]
+                        nb_build_skipped += 1
+                        break
+                else:
+                    # get specific sketch options to append to the fqbn
+                    for pattern in sketch_options:
+                        if pattern in sketch_options:
+                            regex = ".*(" + pattern + ").*"
+                            if re.match(regex, sketch, re.IGNORECASE):
+                                if build_conf_list[idx][4][-2].count(":") == 3:
+                                    build_conf_list[idx][4][-2] += (
+                                        "," + sketch_options[pattern]
+                                    )
+                                else:
+                                    build_conf_list[idx][4][-2] += (
+                                        ":" + sketch_options[pattern]
+                                    )
     return build_conf_list
 
 
 # Automatic run
 def build_all():
     create_output_log_tree()
-    build_conf_list = create_build_conf_list()
+    gen_build_conf_list = create_build_conf_list()
 
     for sketch_nb, sketch in enumerate(sketch_list, start=1):
         boardKo = []
+        boardSkipped = []
         print("\nBuilding : {} ({}/{}) ".format(sketch, sketch_nb, len(sketch_list)))
-        # Update command with sketch to build
-        for idx in range(len(build_conf_list)):
-            build_conf_list[idx][4][-1] = sketch
+        build_conf_list = build_config(gen_build_conf_list, sketch, boardSkipped)
 
         with concurrent.futures.ProcessPoolExecutor() as executor:
             for build_conf, res in zip(
                 build_conf_list, executor.map(build, build_conf_list)
             ):
                 check_status(res, build_conf, boardKo)
-        log_sketch_build_result(sketch, boardKo)
+        log_sketch_build_result(sketch, boardKo, boardSkipped)
     log_final_result()
 
 
 # Run arduino builder command
 def build(build_conf):
-    cmd = build_conf[4]
     print("Build {} ({}/{})... ".format(build_conf[0], build_conf[1], build_conf[2]))
+    cmd = build_conf[4]
     with open(
         os.path.join(build_conf[3], os.path.basename(cmd[-1]) + ".log"), "w"
     ) as stdout:
@@ -502,6 +687,25 @@ parser.add_argument(
     action="store_true",
 )
 parser.add_argument(
+    "--arch",
+    metavar="architecture",
+    help="core architecture to build. Default build architecture is '"
+    + arch_default
+    + "'",
+)
+parser.add_argument(
+    "--config",
+    metavar="<core configuration file>",
+    help="JSON file containing the build configuration for one or more\
+    maintainer/architecture. Board options for build, applicability of\
+    sketches for boards or required options. If sketch is not listed\
+    then applicable to all board. Default core configuration is for '"
+    + arch_default
+    + " 'architecture in: "
+    + os.path.join(script_path, cores_config_file_default),
+)
+
+parser.add_argument(
     "-v", "--verbose", help="enable arduino-builder verbose mode", action="store_true"
 )
 
@@ -518,10 +722,13 @@ sketchg0 = parser.add_argument_group(
 
 sketchg1 = sketchg0.add_mutually_exclusive_group()
 sketchg1.add_argument(
-    "-i", "--ino", metavar="filepath", help="single ino file to build"
+    "-i", "--ino", metavar="<shetch filepath>", help="single ino file to build"
 )
 sketchg1.add_argument(
-    "-f", "--file", metavar="filepath", help="file containing list of sketches to build"
+    "-f",
+    "--file",
+    metavar="<sketches list filepath>",
+    help="file containing list of sketches to build",
 )
 sketchg1.add_argument(
     "-s",
@@ -532,7 +739,7 @@ sketchg1.add_argument(
 sketchg1.add_argument(
     "-e",
     "--exclude",
-    metavar="filepath",
+    metavar="<excluded sketches list filepath>",
     help="file containing pattern of sketches to ignore.\
     Default path : "
     + os.path.join(script_path, exclude_file_default),
@@ -545,11 +752,13 @@ def main():
     if args.clean:
         deleteFolder(root_output_dir)
 
+    load_core_config()
+
     find_board()
     if args.list == "board":
-        print("%i board(s) available" % len(board_list))
-        for board in board_list:
-            print(board[1])
+        print("%i board(s) available" % len(board_type))
+        for board in board_type:
+            print(board)
         quit()
 
     manage_inos()
@@ -558,6 +767,9 @@ def main():
             print(sketch)
         print("%i sketches found" % len(sketch_list))
         quit()
+
+    if core_config:
+        parse_core_config()
 
     createFolder(build_output_dir)
     createFolder(output_dir)
