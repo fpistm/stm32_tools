@@ -393,7 +393,17 @@ def find_board():
         "([^#\.]+)(?:\.menu\.(?:pnum|device_variant)\.)?([^\.]+)?(?:\.build\.variant)?="
     )
     core_pattern = re.compile(
-        os.path.sep + maintainer + os.path.sep + ".*" + os.path.sep + "?" + arch
+        "\\"
+        + os.path.sep
+        + maintainer
+        + "\\"
+        + os.path.sep
+        + "[^\\"
+        + os.path.sep
+        + "]*\\"
+        + os.path.sep
+        + "?"
+        + arch
     )
     if args.board:
         arg_board_pattern = re.compile(args.board, re.IGNORECASE)
