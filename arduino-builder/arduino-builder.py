@@ -477,9 +477,10 @@ Build SKIPPED: {6}/{4}
         )
         if len(boardKo):
             f.write("Failed boards :\n" + "\n".join(boardKo))
+            f.write("\n")
         if len(boardSkipped):
             f.write("Skipped boards :\n" + "\n".join(boardSkipped))
-
+            f.write("\n")
 
 # Log final result
 def log_final_result():

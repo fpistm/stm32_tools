@@ -4,6 +4,7 @@ Bridge
 Esplora
 GSM
 OldStandardFirmata
+firmata_test
 Robot_Control
 Robot_Motor
 SpacebrewYun

@@ -25,12 +25,12 @@
           "boards": [ "DISCO_L475VG_IOT" ]
         },
         {
-          "pattern": "mqtt_STM32Ethernet.ino|Ethernet_MQTT_Adafruit.io.ino|Hello_stm32",
+          "pattern": "STM32Ethernet|Ethernet_MQTT_Adafruit.io.ino|Hello_stm32",
           "applicable": true,
           "boards": [ "NUCLEO_F429ZI", "DISCO_F746NG" ]
         },
         {
-          "pattern": "WiFi-ISM43362-M3G-L44|WiFi_MQTT_Adafruit.io.ino|mqtt_B-L475E-IOT01A.ino",
+          "pattern": "ISM43362-M3G-L44|WiFi_MQTT_Adafruit.io.ino|mqtt_B-L475E-IOT01A.ino",
           "applicable": true,
           "boards": [ "DISCO_L475VG_IOT" ]
         },
