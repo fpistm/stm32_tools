@@ -35,7 +35,7 @@
           "boards": [ "DISCO_L475VG_IOT" ]
         },
         {
-          "pattern": "ExternalWakeup.ino",
+          "pattern": "ExternalWakeup.ino|BleSensors_SensiBLE|NucleoCar",
           "applicable": false,
           "boards": [
             "NUCLEO_L031K6",
