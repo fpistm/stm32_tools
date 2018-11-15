@@ -25,14 +25,18 @@ outfile=cores/arduino/stm32/stm32_def_build.h
 print_header() {
 echo "#ifndef _STM32_DEF_BUILD_
 #define _STM32_DEF_BUILD_
-" > $outfile
+
+#if !defined(CMSIS_STARTUP_FILE) && !defined(CUSTOM_STARTUP_FILE)" > $outfile
 }
 
 print_footer() {
 echo "#else
 #error UNKNOWN CHIP
 #endif
-#endif //_STM32_DEF_BUILD_" >> $outfile
+#else
+#warning \"No CMSIS startup file defined, custom one should be used\"
+#endif /* !CMSIS_STARTUP_FILE && !CUSTOM_STARTUP_FILE */
+#endif /* _STM32_DEF_BUILD_ */" >> $outfile
 }
 
 print_list() {

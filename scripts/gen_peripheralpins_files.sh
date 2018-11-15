@@ -53,5 +53,5 @@ do
 	# Compute generic file name
 	n=`echo $f | sed -e "s/\.xml//g"`
 	# Generate PeripheralPins.c
-	python $genpinmap $n "$f"
+	python $genpinmap "$n" "$f"
 done
