@@ -22,7 +22,7 @@ set -o nounset                              # Treat unset variables as an error
 
 HAL_outpath=cores/arduino/stm32/HAL
 LL_outpath=cores/arduino/stm32/LL
-series=("F0" "F1" "F2" "F3" "F4" "F7" "H7" "L0" "L1" "L4")
+series=("F0" "F1" "F2" "F3" "F4" "F7" "G0" "H7" "L0" "L1" "L4" "WB")
 all_LL_file=stm32yyxx_ll.h
 
 # Will create the file
@@ -38,6 +38,10 @@ print_LL_header() {
 upper=`echo $1 | awk '{print toupper($1)}' | sed -e "s/\./_/g"`
 echo "#ifndef _${upper}_
 #define _${upper}_
+/* LL raised several warnings, ignore them */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored \"-Wunused-parameter\"
+#pragma GCC diagnostic ignored \"-Wstrict-aliasing\"
 " > $LL_outpath/$1
 }
 
@@ -115,12 +119,7 @@ if [ ! -f $LL_outpath/$all_LL_file ]; then
   print_LL_header $all_LL_file
 fi
 echo "/* Include Low Layers drivers */" >> $LL_outpath/${all_LL_file}
-echo "/* LL raised several warnings, ignore them */" >> $LL_outpath/${all_LL_file}
-echo "#pragma GCC diagnostic push" >> $LL_outpath/${all_LL_file}
-echo "#pragma GCC diagnostic ignored \"-Wunused-parameter\"" >> $LL_outpath/${all_LL_file}
-echo "#pragma GCC diagnostic ignored \"-Wstrict-aliasing\"" >> $LL_outpath/${all_LL_file}
 sort -u $LL_outpath/${all_LL_file}.tmp >> $LL_outpath/${all_LL_file}
-echo "#pragma GCC diagnostic pop" >> $LL_outpath/${all_LL_file}
 rm -f $LL_outpath/${all_LL_file}.tmp
 
 # Search all template file to end "#if 0"
@@ -135,6 +134,7 @@ filelist=(`find $LL_outpath -maxdepth 1 -name "stm32yyxx_ll*.h"`)
 for fp in ${filelist[@]}
 do
   upper=`basename $fp | awk '{print toupper($1)}' | sed -e "s/\./_/g"`
+  echo "#pragma GCC diagnostic pop" >> $fp
   echo "#endif /* _${upper}_ */" >> $fp
 done
 
